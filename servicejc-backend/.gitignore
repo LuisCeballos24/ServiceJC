@@ -29,7 +29,7 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 # .gitignore
-src/main/resources/firebase/serviceAccountKey.json
+src/main/resources/serviceAccountKey.json
 
 ### VS Code ###
 .vscode/
