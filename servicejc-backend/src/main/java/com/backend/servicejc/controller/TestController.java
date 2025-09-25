@@ -1,6 +1,6 @@
-package com.backend.precify.controller;
+package com.backend.servicejc.controller;
 
-import com.backend.precify.service.FirestoreService;
+import com.backend.servicejc.service.FirestoreService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;

@@ -9,17 +9,19 @@ public class Usuario {
     private String correo;
     private String contrasena; // Se debe guardar encriptada
     private String telefono;
+    private Rol rol; // Campo que referencia al enum Rol
 
     // Constructor vacío requerido por Firestore
     public Usuario() {}
 
     // Constructor con todos los campos
-    public Usuario(String id, String nombre, String correo, String contrasena, String telefono) {
+    public Usuario(String id, String nombre, String correo, String contrasena, String telefono, Rol rol) {
         this.id = id;
         this.nombre = nombre;
         this.correo = correo;
         this.contrasena = contrasena;
         this.telefono = telefono;
+        this.rol = rol;
     }
 
     // Getters y Setters
@@ -61,5 +63,13 @@ public class Usuario {
 
     public void setTelefono(String telefono) {
         this.telefono = telefono;
+    }
+
+    public Rol getRol() {
+        return rol;
+    }
+
+    public void setRol(Rol rol) {
+        this.rol = rol;
     }
 }

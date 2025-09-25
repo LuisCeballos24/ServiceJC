@@ -1,4 +1,4 @@
-package com.backend.precify.service;
+package com.backend.servicejc.service;
 
 import com.google.cloud.firestore.Firestore;
 import com.google.firebase.cloud.FirestoreClient;

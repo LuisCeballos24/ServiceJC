@@ -7,20 +7,25 @@ import java.util.List;
 public class Cita {
     @DocumentId
     private String id;
-    private String usuarioId; // Referencia al ID del usuario
+    private String usuarioId; // ID del usuario que solicita la cita
+    private String tecnicoId; // ID del técnico asignado a la cita
     private List<String> serviciosSeleccionados; // IDs de los servicios seleccionados
     private Date fechaHora;
-    private String estado; // Ej: "pendiente", "confirmada", "cancelada"
+    private String estado; // Ej: "pendiente", "confirmada", "cancelada", "completada"
+    private double costoTotal; // Costo total de los servicios
 
-    // Constructor vacío
+    // Constructor vacío requerido por Firestore
     public Cita() {}
 
-    public Cita(String id, String usuarioId, List<String> serviciosSeleccionados, Date fechaHora, String estado) {
+    // Constructor con todos los campos
+    public Cita(String id, String usuarioId, String tecnicoId, List<String> serviciosSeleccionados, Date fechaHora, String estado, double costoTotal) {
         this.id = id;
         this.usuarioId = usuarioId;
+        this.tecnicoId = tecnicoId;
         this.serviciosSeleccionados = serviciosSeleccionados;
         this.fechaHora = fechaHora;
         this.estado = estado;
+        this.costoTotal = costoTotal;
     }
 
     // Getters y Setters
@@ -38,6 +43,14 @@ public class Cita {
 
     public void setUsuarioId(String usuarioId) {
         this.usuarioId = usuarioId;
+    }
+
+    public String getTecnicoId() {
+        return tecnicoId;
+    }
+
+    public void setTecnicoId(String tecnicoId) {
+        this.tecnicoId = tecnicoId;
     }
 
     public List<String> getServiciosSeleccionados() {
@@ -62,5 +75,13 @@ public class Cita {
 
     public void setEstado(String estado) {
         this.estado = estado;
+    }
+
+    public double getCostoTotal() {
+        return costoTotal;
+    }
+
+    public void setCostoTotal(double costoTotal) {
+        this.costoTotal = costoTotal;
     }
 }
