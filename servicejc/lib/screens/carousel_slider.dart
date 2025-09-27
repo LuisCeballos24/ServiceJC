@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 class CustomCarousel extends StatelessWidget {
   final List<String> images = [
-    "https://picsum.photos/600/400?random=1",
+    "https://lh3.googleusercontent.com/pw/AP1GczMX-uJoBacGJDRcQNei0Nywj9MlfX-vftkv3ja8qqE5XITBeTfz5MSpHio8scU2WJW8EPplvqSP1NHE1EZ5kkCtgfGVxwD4fvBMaEXe3QS0k9glxXXYZpqChbPyzNXuG1d6QywIBmOcTOnnw3INL_ew5g=w1248-h832-s-no-gm?authuser=0",
     "https://picsum.photos/600/400?random=2",
     "https://picsum.photos/600/400?random=3",
     "https://picsum.photos/600/400?random=4",
