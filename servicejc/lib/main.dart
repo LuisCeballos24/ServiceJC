@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:servicejc/screens/login_screen.dart';
+import 'package:servicejc/screens/register_screen.dart';
 import 'package:servicejc/screens/welcome_client_screen.dart';
 
 // Tema global
@@ -16,13 +17,18 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'ServiceJC',
-      theme: AppTheme.lightTheme,     // Tema claro
-      darkTheme: AppTheme.darkTheme,  // Tema oscuro
-      themeMode: ThemeMode.dark,    // Sigue la configuración del sistema
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.dark,
       initialRoute: '/',
       routes: {
+        // RUTA INICIAL: Llama al Wrapper para decidir si está logueado
         '/': (context) => const WelcomeClientScreen(),
+
+        // RUTA DE LOGIN: Pantalla de inicio de sesión
         '/login': (context) => const LoginScreen(),
+
+        '/register': (context) => const RegisterScreen(),
       },
     );
   }

@@ -1,6 +1,7 @@
 package com.backend.servicejc.model;
 
 import com.google.cloud.firestore.annotation.DocumentId;
+// ASUME que UserAddressModel está en el mismo paquete o importado.
 
 public class Usuario {
     @DocumentId
@@ -9,19 +10,25 @@ public class Usuario {
     private String correo;
     private String contrasena; // Se debe guardar encriptada
     private String telefono;
-    private Rol rol; // Campo que referencia al enum Rol
+    // CORREGIDO: Se cambia el tipo a Rol para usar el enum existente.
+    private Rol rol; 
+    
+    // CAMPO PARA OBJETO ANIDADO
+    private UserAddressModel direccion; 
 
     // Constructor vacío requerido por Firestore
     public Usuario() {}
 
-    // Constructor con todos los campos
-    public Usuario(String id, String nombre, String correo, String contrasena, String telefono, Rol rol) {
+    // Constructor con todos los campos (ACTUALIZADO)
+    // Se cambia el tipo de 'rol' en el constructor a Rol
+    public Usuario(String id, String nombre, String correo, String contrasena, String telefono, Rol rol, UserAddressModel direccion) {
         this.id = id;
         this.nombre = nombre;
         this.correo = correo;
         this.contrasena = contrasena;
         this.telefono = telefono;
         this.rol = rol;
+        this.direccion = direccion; // NUEVO
     }
 
     // Getters y Setters
@@ -65,11 +72,22 @@ public class Usuario {
         this.telefono = telefono;
     }
 
+    // CORREGIDO: Se cambia el tipo de retorno a Rol
     public Rol getRol() {
         return rol;
     }
 
+    // CORREGIDO: Se cambia el tipo de parámetro a Rol
     public void setRol(Rol rol) {
         this.rol = rol;
+    }
+    
+    // NUEVOS GETTER Y SETTER para la dirección
+    public UserAddressModel getDireccion() {
+        return direccion;
+    }
+
+    public void setDireccion(UserAddressModel direccion) {
+        this.direccion = direccion;
     }
 }

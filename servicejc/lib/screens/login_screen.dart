@@ -1,10 +1,9 @@
-// En lib/screens/login_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:servicejc/screens/welcome_client_screen.dart';
 import 'package:servicejc/screens/register_screen.dart';
 import 'package:servicejc/services/auth_service.dart';
-import 'package:servicejc/screens/payment_method_screen.dart'; // ¡Importa la nueva pantalla!
+import 'package:servicejc/screens/payment_method_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Importante para persistencia
 
 class LoginScreen extends StatefulWidget {
   final String purpose;
@@ -31,30 +30,30 @@ class _LoginScreenState extends State<LoginScreen> {
       final String email = _emailController.text;
       final String password = _passwordController.text;
 
-      // Asume que la autenticación es exitosa y devuelve un token
+      // 1. Asume que la autenticación es exitosa y devuelve un objeto con el token
       final response = await _authService.loginUser(email, password);
+
+      // 2. GUARDAR EL TOKEN PARA PERSISTENCIA
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('authToken', response.token); // Guardamos el token
 
       // Muestra un mensaje de éxito
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login exitoso. Token: ${response.token}')),
+        SnackBar(content: Text('Login exitoso. Bienvenido de nuevo.')),
       );
 
-      // Lógica de navegación basada en el propósito
+      // 3. Lógica de navegación basada en el propósito
       if (widget.purpose == 'initial') {
         // Si el propósito es "initial", navega a la pantalla principal
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) => const WelcomeClientScreen(),
-          ),
+          MaterialPageRoute(builder: (context) => const WelcomeClientScreen()),
         );
       } else {
         // Si el propósito no es "initial", navega a la pasarela de pago
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) => const PaymentMethodScreen(),
-          ),
+          MaterialPageRoute(builder: (context) => const PaymentMethodScreen()),
         );
       }
     } catch (e) {
@@ -64,9 +63,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // ... El resto del código `build` sigue siendo el mismo.
-  // ... No necesitas cambiar nada en `build` a menos que quieras ajustar el texto de los botones.
-  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -97,7 +93,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    widget.purpose == 'initial' ? 'Iniciar Sesión' : 'Confirmar Solicitud',
+                    widget.purpose == 'initial'
+                        ? 'Iniciar Sesión'
+                        : 'Confirmar Solicitud',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 28,
@@ -156,7 +154,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                     child: Text(
-                      widget.purpose == 'initial' ? 'Ingresar' : 'Continuar con el Pago',
+                      widget.purpose == 'initial'
+                          ? 'Ingresar'
+                          : 'Continuar con el Pago',
                       style: const TextStyle(fontSize: 18, color: Colors.white),
                     ),
                   ),
@@ -169,7 +169,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                            MaterialPageRoute(
+                              builder: (context) => const RegisterScreen(),
+                            ),
                           );
                         },
                         child: const Text(

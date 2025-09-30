@@ -27,7 +27,6 @@ public class TecnicoService {
 
     public String crearTecnico(Usuario tecnico) throws ExecutionException, InterruptedException {
         CollectionReference usuariosCollection = firestore.collection("usuarios");
-        tecnico.setRol(Rol.TECNICO);
         String encodedPassword = passwordEncoder.encode(tecnico.getContrasena());
         tecnico.setContrasena(encodedPassword);
 
