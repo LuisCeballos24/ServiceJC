@@ -47,19 +47,20 @@ class ContactInfo extends StatelessWidget {
                 onPressed: () => _launchURL('https://facebook.com/servicejc'),
               ),
               IconButton(
+                icon: const Icon(Icons.tiktok, color: accentColor),
+                onPressed: () => _launchURL('https://tiktok.com/servicejc'),
+              ),
+              // IconButton(
+              //   icon: const Icon(Icons.meta, color: accentColor),
+              //   onPressed: () => _launchURL('https://youtube.com/servicejc'),
+              // ),
+              IconButton(
                 icon: const Icon(Icons.mail, color: accentColor),
                 onPressed: () => _launchURL('mailto:contacto@servicejc.com'),
               ),
             ],
           ),
           const SizedBox(height: 24),
-          const Center(
-            child: Text(
-              '© 2024 ServiceJC. Todos los derechos reservados.',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
-              textAlign: TextAlign.center,
-            ),
-          ),
         ],
       ),
     );

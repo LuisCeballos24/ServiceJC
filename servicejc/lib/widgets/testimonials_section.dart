@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:servicejc/theme/app_text_styles.dart';
 
 class TestimonialsSection extends StatelessWidget {
   const TestimonialsSection({super.key});
@@ -43,13 +44,13 @@ class TestimonialsSection extends StatelessWidget {
           height: 200, // Altura ajustada para el nuevo diseño
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 6),
             itemCount: testimonials.length,
             itemBuilder: (context, index) {
               final testimonial = testimonials[index];
               return Container(
-                width: MediaQuery.of(context).size.width * 0.8, // 80% del ancho
-                margin: const EdgeInsets.only(right: 16),
+                width: MediaQuery.of(context).size.width * 0.45, // 80% del ancho
+                margin: const EdgeInsets.only(right: 6),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: secondaryColor,
@@ -75,10 +76,8 @@ class TestimonialsSection extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       '"${testimonial['review']}"',
-                      style: const TextStyle(
+                      style: AppTextStyles.h3.copyWith(
                         fontStyle: FontStyle.italic,
-                        color: Colors.white70,
-                        fontSize: 14,
                       ),
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
@@ -86,11 +85,7 @@ class TestimonialsSection extends StatelessWidget {
                     const Spacer(),
                     Text(
                       '- ${testimonial['name']}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        fontSize: 16,
-                      ),
+                      style: AppTextStyles.h3,
                     ),
                   ],
                 ),

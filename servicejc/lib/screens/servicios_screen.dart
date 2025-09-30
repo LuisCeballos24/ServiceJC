@@ -3,6 +3,8 @@ import 'package:servicejc/models/service_model.dart';
 import 'package:servicejc/models/product_model.dart';
 import 'package:servicejc/screens/coordinar_cita_screen.dart';
 import 'package:servicejc/services/servicio_service.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_text_styles.dart';
 
 class ServiciosScreen extends StatefulWidget {
   final ServiceModel servicio;
@@ -20,11 +22,9 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
   @override
   void initState() {
     super.initState();
-    // Carga los productos usando el ID del servicio
     _futureProductos = ServicioService().fetchProductos(widget.servicio.id);
   }
 
-  // Lógica para el modal de "Otros"
   void _showOtherServiceModal(ProductModel producto) {
     final TextEditingController controller = TextEditingController();
     showDialog(
@@ -34,7 +34,7 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          title: const Text('Especificar Servicio'),
+          title: const Text('Especificar Servicio', style: AppTextStyles.modalTitle),
           content: TextField(
             controller: controller,
             decoration: const InputDecoration(
@@ -50,20 +50,14 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
                   producto.isSelected = false;
                 });
               },
-              child: const Text('Cancelar'),
+              child: const Text('Cancelar', style: AppTextStyles.modalButton),
             ),
             ElevatedButton(
               onPressed: () {
                 print('Servicio "Otros" especificado: ${controller.text}');
                 Navigator.of(context).pop();
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color.fromRGBO(52, 152, 219, 1),
-              ),
-              child: const Text(
-                'Aceptar',
-                style: TextStyle(color: Colors.white),
-              ),
+              child: const Text('Aceptar', style: AppTextStyles.modalButton),
             ),
           ],
         );
@@ -71,22 +65,15 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
     );
   }
 
-  // Construye la tarjeta del producto con el checkbox
   Widget _buildProductCheckbox(ProductModel producto) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: CheckboxListTile(
-        title: Text(
-          producto.nombre,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
+        title: Text(producto.nombre, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(
           'B/. ${producto.costo.toStringAsFixed(2)}',
-          style: const TextStyle(
-            color: Colors.green,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
         ),
         value: producto.isSelected,
         onChanged: (bool? newValue) {
@@ -102,12 +89,11 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
             _showOtherServiceModal(producto);
           }
         },
-        activeColor: const Color.fromRGBO(39, 174, 96, 1),
+        activeColor: AppColors.activeCheckbox,
       ),
     );
   }
 
-  // Construye el resumen con el botón de solicitar
   Widget _buildTotalSummary() {
     final selectedCount = _productosSeleccionados.length;
     final buttonText = selectedCount > 0
@@ -117,7 +103,7 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBackground,
         boxShadow: [
           BoxShadow(
             color: Colors.black12,
@@ -131,21 +117,11 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
             ? () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const CoordinarCitaScreen(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const CoordinarCitaScreen()),
                 );
               }
             : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color.fromRGBO(52, 152, 219, 1),
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-        ),
-        child: Text(buttonText, style: const TextStyle(fontSize: 18)),
+        child: Text(buttonText),
       ),
     );
   }
@@ -154,20 +130,12 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          widget.servicio.nombre,
-          style: const TextStyle(
-            color: Color.fromRGBO(52, 73, 94, 1),
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: Colors.white,
+        title: Text(widget.servicio.nombre, style: const TextStyle(color: AppColors.cardTitle, fontWeight: FontWeight.bold)),
+        backgroundColor: AppColors.cardBackground,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color.fromRGBO(52, 73, 94, 1)),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          icon: const Icon(Icons.arrow_back, color: AppColors.cardTitle),
+          onPressed: () => Navigator.pop(context),
         ),
       ),
       body: Column(
@@ -179,17 +147,15 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 } else if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
+                  return Center(child: Text('Error: ${snapshot.error}', style: Theme.of(context).textTheme.bodyMedium));
                 } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('No se encontraron productos para este servicio.'));
+                  return Center(child: Text('No se encontraron productos para este servicio.', style: Theme.of(context).textTheme.bodyMedium));
                 } else {
                   final productos = snapshot.data!;
                   return ListView.builder(
                     padding: const EdgeInsets.all(16.0),
                     itemCount: productos.length,
-                    itemBuilder: (context, index) {
-                      return _buildProductCheckbox(productos[index]);
-                    },
+                    itemBuilder: (context, index) => _buildProductCheckbox(productos[index]),
                   );
                 }
               },
