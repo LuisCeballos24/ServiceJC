@@ -297,21 +297,26 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
     required void Function(LocationModel?) onChanged,
     required bool isEnabled,
   }) {
-    return DropdownButtonFormField<LocationModel>(
-      decoration: InputDecoration(
-        labelText: label,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-        filled: true,
-        fillColor: isEnabled
-            ? AppColors.secondary
-            : AppColors.softWhite.withOpacity(0.1),
+    // Envuelve el Dropdown en un Container para asegurar las restricciones de ancho.
+    return Container(
+      child: DropdownButtonFormField<LocationModel>(
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+          filled: true,
+          fillColor: isEnabled
+              ? AppColors.secondary
+              : AppColors.softWhite.withOpacity(0.1),
+        ),
+        value: selectedItem,
+        items: items
+            .map(
+              (item) => DropdownMenuItem(value: item, child: Text(item.name)),
+            )
+            .toList(),
+        onChanged: isEnabled ? onChanged : null,
+        validator: (value) => value == null ? 'Seleccione una opción' : null,
       ),
-      value: selectedItem,
-      items: items
-          .map((item) => DropdownMenuItem(value: item, child: Text(item.name)))
-          .toList(),
-      onChanged: isEnabled ? onChanged : null,
-      validator: (value) => value == null ? 'Seleccione una opción' : null,
     );
   }
 

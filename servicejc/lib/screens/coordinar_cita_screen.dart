@@ -4,11 +4,13 @@ import 'package:servicejc/models/product_model.dart';
 import 'package:servicejc/screens/loading_screen.dart';
 import 'package:servicejc/theme/app_colors.dart';
 import 'package:servicejc/theme/app_text_styles.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class CoordinarCitaScreen extends StatefulWidget {
   final Map<ProductModel, int> selectedProducts;
-  final double subtotal; // NUEVO
-  final double discountAmount; // NUEVO
+  final double subtotal;
+  final double discountAmount;
   final double totalCost;
   final LocationModel province;
   final LocationModel district;
@@ -19,8 +21,8 @@ class CoordinarCitaScreen extends StatefulWidget {
   const CoordinarCitaScreen({
     super.key,
     required this.selectedProducts,
-    required this.subtotal, // REQUERIDO
-    required this.discountAmount, // REQUERIDO
+    required this.subtotal,
+    required this.discountAmount,
     required this.totalCost,
     required this.province,
     required this.district,
@@ -36,8 +38,28 @@ class CoordinarCitaScreen extends StatefulWidget {
 class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
+  final TextEditingController _descriptionController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final List<File> _selectedPhotos = [];
+  final ImagePicker _picker = ImagePicker();
+  // Simulación: lista para almacenar rutas de fotos seleccionadas
+
+  @override
+  void dispose() {
+    _descriptionController.dispose();
+    super.dispose();
+  }
 
   // --- Lógica de la Cita ---
+
+  bool _isFormValid() {
+    // La forma es válida si:
+    // 1. La fecha y hora están seleccionadas.
+    // 2. La descripción no está vacía.
+    return _selectedDate != null &&
+        _selectedTime != null &&
+        _descriptionController.text.trim().isNotEmpty;
+  }
 
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -48,12 +70,11 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
       builder: (context, child) {
         return Theme(
           data: ThemeData.light().copyWith(
-            primaryColor: AppColors.primary, // Color primario del picker
+            primaryColor: AppColors.primary,
             colorScheme: const ColorScheme.light(
-              primary: AppColors.elevatedButton, // Color del header
-              onPrimary: AppColors
-                  .elevatedButtonForeground, // Color del texto del header
-              onSurface: AppColors.cardTitle, // Color del texto de la fecha
+              primary: AppColors.elevatedButton,
+              onPrimary: AppColors.elevatedButtonForeground,
+              onSurface: AppColors.cardTitle,
             ),
             buttonTheme: const ButtonThemeData(
               textTheme: ButtonTextTheme.primary,
@@ -90,15 +111,94 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
     }
   }
 
-  void _confirmAppointment() {
-    // Aquí iría la lógica para guardar la cita en tu backend
-    // ... (Se mantiene la lógica de impresión y navegación original)
-
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => const LoadingScreen()),
-      (route) => false,
+  Future<void> _addPhoto() async {
+    final XFile? pickedFile = await _picker.pickImage(
+      source: ImageSource.gallery, // Puedes usar ImageSource.camera o dialog
+      imageQuality: 70, // Optimiza el tamaño del archivo
     );
+
+    if (pickedFile != null) {
+      setState(() {
+        _selectedPhotos.add(File(pickedFile.path));
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Foto agregada con éxito.')));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se seleccionó ninguna foto.')),
+      );
+    }
+  }
+
+  // --- Widget para mostrar las miniaturas (OPCIONAL pero recomendado) ---
+  Widget _buildPhotoPreview() {
+    if (_selectedPhotos.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8.0,
+          runSpacing: 8.0,
+          children: _selectedPhotos.map((photoFile) {
+            return Stack(
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    image: DecorationImage(
+                      image: FileImage(photoFile),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  right: 0,
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedPhotos.remove(photoFile);
+                      });
+                    },
+                    child: const CircleAvatar(
+                      radius: 10,
+                      backgroundColor: AppColors.danger,
+                      child: Icon(Icons.close, size: 14, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  void _confirmAppointment() {
+    if (_formKey.currentState!.validate() && _isFormValid()) {
+      // Navegar a la pantalla de pago o carga final
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const LoadingScreen()),
+        (route) => false,
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Por favor, completa la fecha, hora y la descripción para confirmar.',
+          ),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+    }
   }
 
   // --- Widgets de Visualización ---
@@ -144,7 +244,6 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
       (sum, q) => sum + q,
     );
 
-    // Calcular el porcentaje de descuento para mostrarlo
     double discountPercentage = widget.subtotal > 0
         ? (widget.discountAmount / widget.subtotal) * 100
         : 0.0;
@@ -252,55 +351,129 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
 
   @override
   Widget build(BuildContext context) {
+    bool canConfirm = _isFormValid();
+
     return Scaffold(
       appBar: AppBar(title: const Text('Coordinar Cita')),
-      body: ListView(
-        padding: const EdgeInsets.all(24.0),
-        children: <Widget>[
-          // 1. Resumen de la Orden (Productos y Descuento)
-          _buildOrderSummaryCard(),
-          const SizedBox(height: 16),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(24.0),
+          children: <Widget>[
+            // 1. Resumen de la Orden (Productos y Descuento)
+            _buildOrderSummaryCard(),
+            const SizedBox(height: 16),
 
-          // 2. Dirección de la Cita
-          _buildAddressCard(),
-          const SizedBox(height: 32),
+            // 2. Dirección de la Cita
+            _buildAddressCard(),
+            const SizedBox(height: 32),
 
-          // 3. Selectores de Fecha y Hora
-          const Text('Selecciona la Fecha y Hora', style: AppTextStyles.h4),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: () => _selectDate(context),
-            icon: const Icon(Icons.calendar_today),
-            label: Text(
-              _selectedDate == null
-                  ? 'Seleccionar Fecha'
-                  : 'Fecha: ${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}',
+            // --- 3. SECCIÓN DE DESCRIPCIÓN ---
+            Text(
+              '3. Describe tu Requerimiento (Obligatorio)',
+              style: AppTextStyles.h4,
             ),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: () => _selectTime(context),
-            icon: const Icon(Icons.access_time),
-            label: Text(
-              _selectedTime == null
-                  ? 'Seleccionar Hora'
-                  : 'Hora: ${_selectedTime!.format(context)}',
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _descriptionController,
+              maxLines: 4,
+              decoration: InputDecoration(
+                hintText:
+                    'Ej: El aire acondicionado gotea y hace un ruido fuerte. Favor revisar el motor.',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                filled: true,
+                fillColor: AppColors.secondary,
+                hintStyle: AppTextStyles.caption.copyWith(
+                  color: AppColors.white54,
+                ),
+              ),
+              style: AppTextStyles.bodyText.copyWith(color: AppColors.white),
+              validator: (value) {
+                if (value == null ||
+                    value.isEmpty ||
+                    value.trim().length < 10) {
+                  return 'Por favor, proporciona una descripción detallada (mínimo 10 caracteres).';
+                }
+                return null;
+              },
+              onChanged: (_) =>
+                  setState(() {}), // Activar la validación del botón
             ),
-          ),
-          const SizedBox(height: 40),
 
-          // 4. Botón de Confirmación
-          ElevatedButton(
-            onPressed: _selectedDate != null && _selectedTime != null
-                ? _confirmAppointment
-                : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.success,
-              padding: const EdgeInsets.symmetric(vertical: 16),
+            const SizedBox(height: 24),
+
+            // --- 4. SECCIÓN DE FOTOS Y PREVIEW (CORREGIDA) ---
+            Text(
+              '4. Agrega Fotos del Daño (Opcional)',
+              style: AppTextStyles.h4,
             ),
-            child: const Text('Confirmar Cita'),
-          ),
-        ],
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: _addPhoto,
+              icon: const Icon(Icons.camera_alt),
+              label: Text(
+                _selectedPhotos.isEmpty
+                    ? 'Subir Foto'
+                    : 'Subir más fotos (${_selectedPhotos.length} añadidas)',
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.iconButton,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+
+            // EL PREVIEW DEBE IR INMEDIATAMENTE DESPUÉS DEL BOTÓN DE SUBIR
+            _buildPhotoPreview(),
+
+            const SizedBox(height: 32),
+
+            // 5. Selectores de Fecha y Hora
+            Text(
+              '5. Selecciona la Fecha y Hora (Obligatorio)',
+              style: AppTextStyles.h4,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () => _selectDate(context),
+              icon: const Icon(Icons.calendar_today),
+              label: Text(
+                _selectedDate == null
+                    ? 'Seleccionar Fecha'
+                    : 'Fecha: ${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}',
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () => _selectTime(context),
+              icon: const Icon(Icons.access_time),
+              label: Text(
+                _selectedTime == null
+                    ? 'Seleccionar Hora'
+                    : 'Hora: ${_selectedTime!.format(context)}',
+              ),
+            ),
+            const SizedBox(height: 40),
+
+            // 6. Botón de Confirmación
+            ElevatedButton(
+              onPressed: canConfirm ? _confirmAppointment : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.success,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                disabledBackgroundColor: AppColors.secondary.withOpacity(0.5),
+                disabledForegroundColor: AppColors.white54,
+              ),
+              child: Text(
+                canConfirm
+                    ? 'Confirmar Cita y Continuar al Pago'
+                    : 'Complete los campos obligatorios para continuar',
+                style: AppTextStyles.button,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
