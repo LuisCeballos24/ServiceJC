@@ -81,6 +81,12 @@ class AppTextStyles {
   );
 
   // -- Texto General --
+  // Estilo que faltaba
+  static const TextStyle bodyText = TextStyle(
+    fontSize: 16,
+    color: AppColors.secondary,
+  );
+
   static const TextStyle body = TextStyle(
     fontSize: 16,
     color: AppColors.secondary,
