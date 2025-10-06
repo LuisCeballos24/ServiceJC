@@ -1,5 +1,6 @@
 package com.backend.servicejc.service;
 
+import com.backend.servicejc.model.AuthResponse;
 import com.backend.servicejc.model.LoginDto;
 import com.backend.servicejc.model.Usuario;
 import com.google.api.core.ApiFuture;
@@ -33,7 +34,7 @@ public class AuthService {
         ApiFuture<QuerySnapshot> query = firestore.collection(COLLECTION_NAME)
                 .whereEqualTo("correo", usuario.getCorreo())
                 .get();
-        
+
         List<QueryDocumentSnapshot> documents = query.get().getDocuments();
         if (!documents.isEmpty()) {
             throw new IllegalArgumentException("El correo ya está registrado.");
@@ -43,26 +44,39 @@ public class AuthService {
     }
 
     // Método para autenticar un usuario
-    public String loginUser(LoginDto loginDto) throws ExecutionException, InterruptedException {
-        // Busca el usuario por correo
+     public AuthResponse loginUser(LoginDto loginDto) throws ExecutionException, InterruptedException {
         ApiFuture<QuerySnapshot> query = firestore.collection(COLLECTION_NAME)
                 .whereEqualTo("correo", loginDto.getCorreo())
                 .get();
 
         List<QueryDocumentSnapshot> documents = query.get().getDocuments();
         if (documents.isEmpty()) {
+            System.out.println("Login Failed: User not found for email: " + loginDto.getCorreo());
             throw new IllegalArgumentException("Credenciales incorrectas.");
         }
 
         Usuario usuario = documents.get(0).toObject(Usuario.class);
-        
-        // En un entorno real, aquí se debería comparar la contraseña encriptada
-        // if (!passwordEncoder.matches(loginDto.getContrasena(), usuario.getContrasena())) {
+        System.out.println("Login Attempt: Found user " + usuario.getCorreo());
+        System.out.println("Provided Password: " + loginDto.getContrasena());
+        System.out.println("Stored Password: " + usuario.getContrasena());
+
         if (!loginDto.getContrasena().equals(usuario.getContrasena())) {
+            System.out.println("Login Failed: Password mismatch for user: " + usuario.getCorreo());
             throw new IllegalArgumentException("Credenciales incorrectas.");
         }
-
-        // Si las credenciales son correctas, puedes generar un token JWT aquí
-        return "fake-jwt-token-para-usuario-" + usuario.getId();
+        
+        String token = "fake-jwt-token-for-user-" + documents.get(0).getId();
+        String userRoleString = null;
+        
+        if (usuario.getRol() != null) {
+            userRoleString = usuario.getRol().name(); // Asumiendo que Rol es un enum
+        }
+        
+        AuthResponse response = new AuthResponse(token, userRoleString);
+        
+        System.out.println("Login Successful: Returning AuthResponse -> Token: " + response.getToken() + ", Rol: " + response.getRol());
+        System.out.println("Login Successful: " + response);
+        
+        return response;
     }
 }

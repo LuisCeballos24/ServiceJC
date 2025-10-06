@@ -6,7 +6,7 @@ import com.backend.servicejc.service.AuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import com.backend.servicejc.model.AuthResponse;
+import com.backend.servicejc.model.AuthResponse; // <--- AGREGAR ESTA LÍNEA
 
 @RestController
 @RequestMapping("/api/auth")
@@ -31,9 +31,9 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> loginUser(@RequestBody LoginDto loginDto) {
         try {
-            String token = authService.loginUser(loginDto);
-            AuthResponse response = new AuthResponse(token); // Crea un objeto de respuesta
-            return new ResponseEntity<>(response, HttpStatus.OK);
+            // CORRECCIÓN: Llamamos al servicio y devolvemos el objeto AuthResponse completo
+            AuthResponse response = authService.loginUser(loginDto);
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             // Manejo de errores
             return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);

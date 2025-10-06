@@ -40,9 +40,10 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
   TimeOfDay? _selectedTime;
   final TextEditingController _descriptionController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+
+  // Lista para almacenar los objetos File de las fotos seleccionadas
   final List<File> _selectedPhotos = [];
   final ImagePicker _picker = ImagePicker();
-  // Simulación: lista para almacenar rutas de fotos seleccionadas
 
   @override
   void dispose() {
@@ -53,9 +54,6 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
   // --- Lógica de la Cita ---
 
   bool _isFormValid() {
-    // La forma es válida si:
-    // 1. La fecha y hora están seleccionadas.
-    // 2. La descripción no está vacía.
     return _selectedDate != null &&
         _selectedTime != null &&
         _descriptionController.text.trim().isNotEmpty;
@@ -111,10 +109,11 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
     }
   }
 
+  // Función para abrir la galería y seleccionar una foto
   Future<void> _addPhoto() async {
     final XFile? pickedFile = await _picker.pickImage(
-      source: ImageSource.gallery, // Puedes usar ImageSource.camera o dialog
-      imageQuality: 70, // Optimiza el tamaño del archivo
+      source: ImageSource.gallery,
+      imageQuality: 70,
     );
 
     if (pickedFile != null) {
@@ -131,7 +130,7 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
     }
   }
 
-  // --- Widget para mostrar las miniaturas (OPCIONAL pero recomendado) ---
+  // Widget para mostrar las miniaturas de las fotos seleccionadas
   Widget _buildPhotoPreview() {
     if (_selectedPhotos.isEmpty) {
       return const SizedBox.shrink();
@@ -183,7 +182,7 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
 
   void _confirmAppointment() {
     if (_formKey.currentState!.validate() && _isFormValid()) {
-      // Navegar a la pantalla de pago o carga final
+      // Lógica de confirmación real
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const LoadingScreen()),
@@ -398,13 +397,12 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
                 }
                 return null;
               },
-              onChanged: (_) =>
-                  setState(() {}), // Activar la validación del botón
+              onChanged: (_) => setState(() {}),
             ),
 
             const SizedBox(height: 24),
 
-            // --- 4. SECCIÓN DE FOTOS Y PREVIEW (CORREGIDA) ---
+            // --- 4. SECCIÓN DE FOTOS Y PREVIEW ---
             Text(
               '4. Agrega Fotos del Daño (Opcional)',
               style: AppTextStyles.h4,
@@ -423,10 +421,7 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
             ),
-
-            // EL PREVIEW DEBE IR INMEDIATAMENTE DESPUÉS DEL BOTÓN DE SUBIR
             _buildPhotoPreview(),
-
             const SizedBox(height: 32),
 
             // 5. Selectores de Fecha y Hora

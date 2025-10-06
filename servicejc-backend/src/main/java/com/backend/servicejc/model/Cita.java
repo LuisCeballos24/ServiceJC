@@ -1,7 +1,7 @@
 package com.backend.servicejc.model;
 
 import com.google.cloud.firestore.annotation.DocumentId;
-import java.util.Date;
+import java.util.Date; 
 import java.util.List;
 
 public class Cita {
@@ -9,7 +9,7 @@ public class Cita {
     private String id;
     private String usuarioId; // ID del usuario que solicita la cita
     private String tecnicoId; // ID del técnico asignado a la cita
-    private List<String> serviciosSeleccionados; // IDs de los servicios seleccionados
+    private List<String>serviciosSeleccionados; // IDs de los servicios seleccionados
     private Date fechaHora;
     private String estado; // Ej: "pendiente", "confirmada", "cancelada", "completada"
     private double costoTotal; // Costo total de los servicios

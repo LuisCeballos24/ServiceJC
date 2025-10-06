@@ -2,9 +2,11 @@ package com.backend.servicejc.model;
 
 public class AuthResponse {
     private String token;
+    private String rol; // <-- CAMPO AGREGADO
 
-    public AuthResponse(String token) {
+    public AuthResponse(String token, String rol) {
         this.token = token;
+        this.rol = rol;
     }
 
     public String getToken() {
@@ -13,5 +15,13 @@ public class AuthResponse {
 
     public void setToken(String token) {
         this.token = token;
+    }
+
+    public String getRol() {
+        return rol;
+    }
+
+    public void setRol(String rol) {
+        this.rol = rol;
     }
 }
