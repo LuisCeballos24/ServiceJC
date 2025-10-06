@@ -43,7 +43,7 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
   double _calculateSubtotal() {
     double subtotal = 0.0;
     _selectedProductsWithQuantity.forEach((product, quantity) {
-      subtotal += (product.costo ?? 0.0) * quantity;
+      subtotal += (product.costo) * quantity;
     });
     return subtotal;
   }

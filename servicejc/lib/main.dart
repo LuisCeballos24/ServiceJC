@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:servicejc/screens/login_screen.dart';
 import 'package:servicejc/screens/register_screen.dart';
 import 'package:servicejc/screens/welcome_client_screen.dart';
+import 'package:servicejc/screens/admin_management_screen.dart';
 
 // Tema global
 import 'package:servicejc/theme/app_theme.dart';
@@ -25,6 +26,7 @@ class MyApp extends StatelessWidget {
         // RUTA DE LOGIN: Pantalla de inicio de sesión
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
+        '/admin/management': (context) => const AdminManagementScreen(),
       },
     );
   }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:servicejc/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:servicejc/screens/welcome_client_screen.dart';
 import 'package:servicejc/screens/register_screen.dart';
 
 class LoginScreen extends StatefulWidget {

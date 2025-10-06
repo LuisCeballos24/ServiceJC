@@ -208,7 +208,7 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
       children: widget.selectedProducts.entries.map((entry) {
         final product = entry.key;
         final quantity = entry.value;
-        final itemTotal = (product.costo ?? 0) * quantity;
+        final itemTotal = (product.costo) * quantity;
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 4.0),
