@@ -44,7 +44,7 @@ public class AuthService {
     }
 
     // Método para autenticar un usuario
-     public AuthResponse loginUser(LoginDto loginDto) throws ExecutionException, InterruptedException {
+   public AuthResponse loginUser(LoginDto loginDto) throws ExecutionException, InterruptedException {
         ApiFuture<QuerySnapshot> query = firestore.collection(COLLECTION_NAME)
                 .whereEqualTo("correo", loginDto.getCorreo())
                 .get();
@@ -60,6 +60,7 @@ public class AuthService {
         System.out.println("Provided Password: " + loginDto.getContrasena());
         System.out.println("Stored Password: " + usuario.getContrasena());
 
+        // CORRECCIÓN: La contraseña no está encriptada, por lo tanto, no se puede usar BCryptPasswordEncoder.
         if (!loginDto.getContrasena().equals(usuario.getContrasena())) {
             System.out.println("Login Failed: Password mismatch for user: " + usuario.getCorreo());
             throw new IllegalArgumentException("Credenciales incorrectas.");
@@ -72,9 +73,9 @@ public class AuthService {
             userRoleString = usuario.getRol().name(); // Asumiendo que Rol es un enum
         }
         
-        AuthResponse response = new AuthResponse(token, userRoleString);
+        AuthResponse response = new AuthResponse(token, userRoleString, usuario.getId()); // <-- AGREGAR userId al constructor
         
-        System.out.println("Login Successful: Returning AuthResponse -> Token: " + response.getToken() + ", Rol: " + response.getRol());
+        System.out.println("Login Successful: Returning AuthResponse -> Token: " + response.getToken() + ", Rol: " + response.getRol() + ", userId: " + response.getUserId());
         System.out.println("Login Successful: " + response);
         
         return response;

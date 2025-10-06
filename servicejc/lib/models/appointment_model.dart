@@ -1,36 +1,42 @@
+// lib/models/appointment_model.dart
+
 class AppointmentModel {
-  final String? id;
-  final String? usuarioId;
-  final List<String> serviciosSeleccionados;
-  final DateTime? fechaHora;
-  final String? estado;
+  final String id;
+  final String fechaHora;
+  final String servicioId;
+  final String clienteId;
+  final String? tecnicoId;
+  final String status;
 
   AppointmentModel({
-    this.id,
-    this.usuarioId,
-    required this.serviciosSeleccionados,
-    this.fechaHora,
-    this.estado,
+    required this.id,
+    required this.fechaHora,
+    required this.servicioId,
+    required this.clienteId,
+    this.tecnicoId,
+    required this.status,
   });
 
-  // Constructor para crear un objeto a partir de un mapa JSON
   factory AppointmentModel.fromJson(Map<String, dynamic> json) {
     return AppointmentModel(
-      id: json['id'],
-      usuarioId: json['usuarioId'],
-      serviciosSeleccionados: List<String>.from(json['serviciosSeleccionados']),
-      fechaHora: json['fechaHora'] != null ? DateTime.parse(json['fechaHora']) : null,
-      estado: json['estado'],
+      id: json['id'] as String,
+      fechaHora: json['fechaHora'] as String,
+      servicioId: json['servicioId'] as String,
+      clienteId: json['clienteId'] as String,
+      tecnicoId: json['tecnicoId'] as String?,
+      status: json['status'] as String,
     );
   }
 
-  // Método para convertir un objeto a un mapa JSON
+  // <--- AÑADIR ESTE MÉTODO
   Map<String, dynamic> toJson() {
     return {
-      'usuarioId': usuarioId,
-      'serviciosSeleccionados': serviciosSeleccionados,
-      'fechaHora': fechaHora?.toIso8601String(),
-      'estado': estado,
+      'id': id,
+      'fechaHora': fechaHora,
+      'servicioId': servicioId,
+      'clienteId': clienteId,
+      'tecnicoId': tecnicoId,
+      'status': status,
     };
   }
 }

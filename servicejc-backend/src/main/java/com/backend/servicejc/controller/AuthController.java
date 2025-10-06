@@ -31,11 +31,9 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> loginUser(@RequestBody LoginDto loginDto) {
         try {
-            // CORRECCIÓN: Llamamos al servicio y devolvemos el objeto AuthResponse completo
             AuthResponse response = authService.loginUser(loginDto);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            // Manejo de errores
             return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         }
     }

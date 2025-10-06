@@ -20,14 +20,10 @@ class MyApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.dark,
-      initialRoute: '/',
+      home: const WelcomeClientScreen(),
       routes: {
-        // RUTA INICIAL: Llama al Wrapper para decidir si está logueado
-        '/': (context) => const WelcomeClientScreen(),
-
         // RUTA DE LOGIN: Pantalla de inicio de sesión
         '/login': (context) => const LoginScreen(),
-
         '/register': (context) => const RegisterScreen(),
       },
     );

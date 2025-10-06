@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:servicejc/screens/admin_dashboard_screen.dart';
 import 'package:servicejc/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:servicejc/screens/my_account_screen.dart';
 
 // Estilos centralizados
 import '../theme/app_colors.dart';
@@ -65,8 +66,8 @@ class _AppBarContentState extends State<AppBarContent> {
       // Opciones para usuario LOGUEADO
       menuItems = [
         const PopupMenuItem<String>(
-          value: 'dashboard',
-          child: Text('Panel de Usuario'),
+          value: 'account', // <--- CAMBIAR EL VALOR A 'account'
+          child: Text('Mi Cuenta'), // <--- CAMBIAR EL TEXTO
         ),
         const PopupMenuItem<String>(
           value: 'settings',
@@ -91,12 +92,10 @@ class _AppBarContentState extends State<AppBarContent> {
       ];
     }
 
-    // Usamos PopupMenuButton en lugar del botón simple
     return PopupMenuButton<String>(
       onSelected: (String result) {
         switch (result) {
           case 'login':
-            // Navegamos a /login y al regresar, verificamos el estado
             Navigator.of(
               context,
             ).pushNamed('/login').then((_) => _checkLoginStatus());
@@ -106,11 +105,11 @@ class _AppBarContentState extends State<AppBarContent> {
               context,
             ).pushNamed('/register').then((_) => _checkLoginStatus());
             break;
-          case 'dashboard':
-            // Navegación al dashboard
+          case 'account': // <--- AHORA EL CASO ES 'account'
+            // CORRECCIÓN: Navegar a la pantalla de 'Mi Cuenta'
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => AdminDashboardScreen()),
+              MaterialPageRoute(builder: (context) => const MyAccountScreen()),
             ).then((_) => _checkLoginStatus());
             break;
           case 'logout':
