@@ -34,6 +34,7 @@ class PromotionsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const SizedBox(height: 16),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 16.0),
           child: Text(

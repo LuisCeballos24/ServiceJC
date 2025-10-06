@@ -2,23 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:servicejc/models/service_model.dart';
 import 'package:servicejc/services/servicio_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:servicejc/screens/admin_dashboard_screen.dart';
 
 // Importar la nueva pantalla de 'Mi Cuenta'
 import 'package:servicejc/screens/my_account_screen.dart';
 
 // Widgets importados
 import 'package:servicejc/widgets/app_bar_content.dart';
+import 'package:servicejc/widgets/hero_banner.dart';
 import 'package:servicejc/widgets/promotions_section.dart';
 import 'package:servicejc/widgets/promo_carousel.dart';
 import 'package:servicejc/widgets/services_grid.dart';
 import 'package:servicejc/widgets/testimonials_section.dart';
-import 'package:servicejc/widgets/contact_info.dart';
 import 'package:servicejc/widgets/app_footer_bar_content.dart';
 
 // Estilos centralizados
 import '../theme/app_colors.dart';
-import '../theme/app_text_styles.dart';
 
+// 🔹 Define una GlobalKey accesible
+final GlobalKey servicesKey = GlobalKey();
+final GlobalKey promotionsKey = GlobalKey();
+
+// Definimos un tipo para manejar los futuros en paralelo
 class WelcomeScreenData {
   final List<ServiceModel> servicios;
   final bool isLoggedIn;
@@ -45,6 +50,15 @@ class _WelcomeClientScreenState extends State<WelcomeClientScreen> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('authToken');
     final isLoggedIn = token != null && token.isNotEmpty;
+
+    if (isLoggedIn) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => AdminDashboardScreen()),
+        );
+      });
+      return WelcomeScreenData([], true);
+    }
 
     final servicios = await ServicioService().fetchServicios();
     return WelcomeScreenData(servicios, isLoggedIn);
@@ -120,33 +134,23 @@ class _WelcomeClientScreenState extends State<WelcomeClientScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 30),
-                        Text(
-                          '¡Bienvenido!',
-                          style: AppTextStyles.heroTitle.copyWith(
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Descubre la mejor solución para tu hogar y oficina.',
-                          style: AppTextStyles.body.copyWith(
-                            color: Colors.white70,
-                          ),
+                        HeroBanner(
+                          servicesKey: servicesKey,
+                          promotionsKey: promotionsKey,
                         ),
                         const SizedBox(height: 32),
-                        const PromotionsSection(),
+                        PromotionsSection(key: promotionsKey),
                         const SizedBox(height: 32),
                         const PromoCarousel(),
                         const SizedBox(height: 32),
                         ServicesGrid(
+                          key: servicesKey,
                           futureServicios: Future.value(servicios),
                           isLargeScreen: isLargeScreen,
                         ),
                         const SizedBox(height: 32),
                         const TestimonialsSection(),
                         const SizedBox(height: 32),
-                        const ContactInfo(),
                         const AppFooterBarContent(),
                       ],
                     ),

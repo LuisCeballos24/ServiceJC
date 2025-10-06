@@ -212,7 +212,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                         Text(
                           'Total a Pagar:',
                           style: AppTextStyles.h4.copyWith(
-                            color: AppColors.white,
+                            color: AppColors.accent,
                           ),
                         ),
                         Text(
@@ -304,9 +304,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
           labelText: label,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
           filled: true,
-          fillColor: isEnabled
-              ? AppColors.secondary
-              : AppColors.softWhite.withOpacity(0.1),
+          fillColor: AppColors.white,
         ),
         value: selectedItem,
         items: items
@@ -327,7 +325,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
         labelText: label,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
         filled: true,
-        fillColor: AppColors.secondary,
+        fillColor: AppColors.white,
       ),
       validator: (value) =>
           value == null || value.isEmpty ? 'Este campo es requerido' : null,

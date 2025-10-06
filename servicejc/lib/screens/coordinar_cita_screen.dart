@@ -307,7 +307,7 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Total a Pagar:', style: AppTextStyles.h2),
+                Text('Total a Pagar:', style: AppTextStyles.h2.copyWith(color: AppColors.accent)),
                 Text(
                   '\$${widget.totalCost.toStringAsFixed(2)}',
                   style: AppTextStyles.h1.copyWith(fontSize: 28),
@@ -353,7 +353,12 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
     bool canConfirm = _isFormValid();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Coordinar Cita')),
+      appBar: AppBar(
+        title: Text('Coordinar Cita'),
+        backgroundColor: AppColors.primary,
+        iconTheme: const IconThemeData(color: AppColors.accent),
+        titleTextStyle: AppTextStyles.h2.copyWith(color: AppColors.accent),
+      ),
       body: Form(
         key: _formKey,
         child: ListView(

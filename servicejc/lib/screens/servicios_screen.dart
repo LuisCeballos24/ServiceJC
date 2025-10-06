@@ -294,7 +294,12 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Servicio: ${widget.servicio.nombre}')),
+      appBar: AppBar(
+        title: Text('Servicio: ${widget.servicio.nombre}'),
+        backgroundColor: AppColors.primary,
+        iconTheme: const IconThemeData(color: AppColors.accent),
+        titleTextStyle: AppTextStyles.h2.copyWith(color: AppColors.accent),
+      ),
       body: Column(
         children: [
           Expanded(
