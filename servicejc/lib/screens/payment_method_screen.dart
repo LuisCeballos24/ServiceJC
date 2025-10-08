@@ -1,6 +1,6 @@
-// En lib/screens/payment_method_screen.dart
-
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_text_styles.dart';
 
 class PaymentMethodScreen extends StatelessWidget {
   const PaymentMethodScreen({super.key});
@@ -9,11 +9,14 @@ class PaymentMethodScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Método de Pago'),
-        backgroundColor: Colors.white,
+        title: Text(
+          'Método de Pago',
+          style: AppTextStyles.h2.copyWith(color: AppColors.cardTitle),
+        ),
+        backgroundColor: AppColors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: AppColors.cardTitle),
           onPressed: () {
             Navigator.pop(context);
           },
@@ -24,50 +27,52 @@ class PaymentMethodScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
+            Text(
               'Selecciona un método para pagar:',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: AppTextStyles.h2.copyWith(color: AppColors.cardTitle),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
-            // Opción para Yappy
             ElevatedButton(
               onPressed: () {
-                // Lógica para la pasarela de Yappy
-                // Aquí iría el código para iniciar el proceso de pago con la API de Yappy
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Redirigiendo a Yappy...')),
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF285C9F), // Color de Yappy
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.elevatedButton,
+                foregroundColor: AppColors.elevatedButtonForeground,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15),
                 ),
               ),
-              child: const Text('Pagar con Yappy', style: TextStyle(fontSize: 18)),
+              child: Text(
+                'Pagar con Yappy',
+                style: AppTextStyles.elevatedButton,
+              ),
             ),
             const SizedBox(height: 24),
-            // Opción para BAC Credomatic
             ElevatedButton(
               onPressed: () {
-                // Lógica para la pasarela de BAC Credomatic
-                // Aquí iría el código para iniciar el proceso de pago con la pasarela de BAC
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Redirigiendo a BAC Credomatic...')),
+                  const SnackBar(
+                    content: Text('Redirigiendo a BAC Credomatic...'),
+                  ),
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFE31B23), // Color de BAC
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.elevatedButton,
+                foregroundColor: AppColors.elevatedButtonForeground,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15),
                 ),
               ),
-              child: const Text('Pagar con Tarjeta (BAC)', style: TextStyle(fontSize: 18)),
+              child: Text(
+                'Pagar con Tarjeta (BAC)',
+                style: AppTextStyles.elevatedButton,
+              ),
             ),
           ],
         ),

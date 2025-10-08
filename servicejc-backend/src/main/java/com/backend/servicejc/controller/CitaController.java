@@ -6,6 +6,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
 
 @RestController
 @RequestMapping("/api/citas")
@@ -15,6 +17,17 @@ public class CitaController {
 
     public CitaController(CitaService citaService) {
         this.citaService = citaService;
+    }
+
+    @GetMapping
+    @PreAuthorize("hasAnyAuthority('ADMINISTRATIVO', 'TECNICO')")
+    public ResponseEntity<List<Cita>> getAllCitas() {
+        try {
+            List<Cita> citas = citaService.getAllCitas();
+            return ResponseEntity.ok(citas);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
     }
 
     @PostMapping

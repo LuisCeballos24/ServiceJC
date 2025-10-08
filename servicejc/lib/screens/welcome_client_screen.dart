@@ -50,16 +50,6 @@ class _WelcomeClientScreenState extends State<WelcomeClientScreen> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('authToken');
     final isLoggedIn = token != null && token.isNotEmpty;
-
-    if (isLoggedIn) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => AdminDashboardScreen()),
-        );
-      });
-      return WelcomeScreenData([], true);
-    }
-
     final servicios = await ServicioService().fetchServicios();
     return WelcomeScreenData(servicios, isLoggedIn);
   }

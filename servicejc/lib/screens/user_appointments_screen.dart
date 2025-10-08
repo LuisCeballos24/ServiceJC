@@ -31,9 +31,7 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
     if (_userId != null) {
       _appointmentsFuture = _apiService.fetchAppointmentsByUserId(_userId!);
     } else {
-      _appointmentsFuture = Future.value(
-        [],
-      ); // Retorna una lista vacía si no hay ID
+      _appointmentsFuture = Future.value([]);
     }
   }
 
@@ -42,10 +40,13 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
       color: AppColors.secondary,
       margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
       child: ListTile(
-        title: Text('Cita #${appointment.id}', style: AppTextStyles.listTitle),
+        title: Text(
+          'Cita #${appointment.id}',
+          style: AppTextStyles.listTitle.copyWith(color: AppColors.white),
+        ),
         subtitle: Text(
           'Estado: ${appointment.status}\nFecha: ${appointment.fechaHora}',
-          style: AppTextStyles.listSubtitle,
+          style: AppTextStyles.listSubtitle.copyWith(color: AppColors.white70),
         ),
       ),
     );
@@ -54,31 +55,56 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Mis Citas')),
-      body: FutureBuilder<List<AppointmentModel>>(
-        future: _appointmentsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.accent),
-            );
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(
-              child: Text('No tienes citas activas.', style: AppTextStyles.h3),
-            );
-          } else {
-            final appointments = snapshot.data!;
-            return ListView.builder(
-              itemCount: appointments.length,
-              itemBuilder: (context, index) {
-                final appointment = appointments[index];
-                return _buildAppointmentCard(appointment);
-              },
-            );
-          }
-        },
+      appBar: AppBar(
+        title: Text(
+          'Mis Citas',
+          style: AppTextStyles.h2.copyWith(color: AppColors.accent),
+        ),
+        backgroundColor: AppColors.primary,
+        iconTheme: const IconThemeData(color: AppColors.accent),
+        titleTextStyle: AppTextStyles.h2.copyWith(color: AppColors.accent),
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppColors.primary, AppColors.secondary],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: FutureBuilder<List<AppointmentModel>>(
+          future: _appointmentsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(color: AppColors.accent),
+              );
+            } else if (snapshot.hasError) {
+              return Center(
+                child: Text(
+                  'Error: ${snapshot.error}',
+                  style: AppTextStyles.h3.copyWith(color: AppColors.white),
+                ),
+              );
+            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return Center(
+                child: Text(
+                  'No tienes citas activas.',
+                  style: AppTextStyles.h3.copyWith(color: AppColors.white),
+                ),
+              );
+            } else {
+              final appointments = snapshot.data!;
+              return ListView.builder(
+                itemCount: appointments.length,
+                itemBuilder: (context, index) {
+                  final appointment = appointments[index];
+                  return _buildAppointmentCard(appointment);
+                },
+              );
+            }
+          },
+        ),
       ),
     );
   }

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:servicejc/models/user_model.dart';
-import 'package:servicejc/models/user_address_model.dart'; // Nuevo modelo de dirección
+import 'package:servicejc/models/user_address_model.dart';
 import 'package:servicejc/services/auth_service.dart';
-import 'package:servicejc/services/location_service.dart'; // Servicio para ubicaciones
-import 'package:servicejc/models/location_model.dart'; // Modelo de ubicación geográfica
+import 'package:servicejc/services/location_service.dart';
+import 'package:servicejc/models/location_model.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_text_styles.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -13,25 +15,18 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  // Controladores de campos básicos
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _barrioController =
-      TextEditingController(); // Nuevo
-  final TextEditingController _casaController =
-      TextEditingController(); // Nuevo
+  final TextEditingController _barrioController = TextEditingController();
+  final TextEditingController _casaController = TextEditingController();
 
-  // NUEVO: Estado para la postulación a Técnico
   bool _isTechnicianApplicant = false;
 
-  // Instancias de servicios
   final AuthService _authService = AuthService();
-  final LocationService _locationService =
-      LocationService(); // Nueva instancia del servicio
+  final LocationService _locationService = LocationService();
 
-  // Variables de estado para la ubicación
   List<LocationModel> _provinces = [];
   List<LocationModel> _districts = [];
   List<LocationModel> _corregimientos = [];
@@ -43,7 +38,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void initState() {
     super.initState();
-    _loadProvinces(); // Cargar la lista inicial de provincias al iniciar la pantalla
+    _loadProvinces();
   }
 
   @override
@@ -54,11 +49,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _phoneController.dispose();
     _barrioController.dispose();
     _casaController.dispose();
-    _locationService.dispose(); // Buena práctica liberar el cliente HTTP
+    _locationService.dispose();
     super.dispose();
   }
 
-  // Lógica de carga de ubicaciones
   Future<void> _loadProvinces() async {
     final provinces = await _locationService.fetchProvinces();
     setState(() {
@@ -94,22 +88,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void _registerUser() async {
-    // Validar que se hayan seleccionado las ubicaciones jerárquicas
     if (_selectedProvince == null ||
         _selectedDistrict == null ||
         _selectedCorregimiento == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Por favor, complete todos los campos de dirección.'),
+          backgroundColor: AppColors.danger,
         ),
       );
       return;
     }
 
-    // Determinar el rol basado en el interruptor
     final userRole = _isTechnicianApplicant ? 'tecnico' : 'user';
 
-    // Crear el modelo de dirección
     final userAddress = UserAddressModel(
       province: _selectedProvince!.name,
       district: _selectedDistrict!.name,
@@ -119,20 +111,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
 
     try {
-      // Crear el modelo de usuario con el rol determinado
       final user = UserModel(
-        id: '', // El backend asignará el ID
+        id: '',
         nombre: _nameController.text,
         correo: _emailController.text,
         contrasena: _passwordController.text,
         telefono: _phoneController.text,
-        direccion: userAddress, // Añadiendo la dirección al usuario
-        rol: userRole, // AHORA ES DINÁMICO
+        direccion: userAddress,
+        rol: userRole,
       );
 
       String message = await _authService.registerUser(user);
 
-      // Lógica de feedback basada en la postulación
       String finalMessage = message;
       if (_isTechnicianApplicant) {
         finalMessage +=
@@ -143,61 +133,91 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(finalMessage),
+          content: Text(
+            finalMessage,
+            style: AppTextStyles.bodyText.copyWith(color: AppColors.white),
+          ),
           duration: const Duration(seconds: 4),
+          backgroundColor: AppColors.success,
         ),
       );
-      // Navega a la pantalla de login después del registro exitoso
       Navigator.pop(context);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al registrar usuario: ${e.toString()}')),
+        SnackBar(
+          content: Text(
+            'Error al registrar usuario: ${e.toString()}',
+            style: AppTextStyles.bodyText.copyWith(color: AppColors.white),
+          ),
+          backgroundColor: AppColors.danger,
+        ),
       );
     }
   }
 
-  // Widget genérico para los campos de texto
   Widget _buildTextField(
     TextEditingController controller,
     String label, {
     bool isPassword = false,
+    TextInputType keyboardType = TextInputType.text,
   }) {
     return TextField(
       controller: controller,
-      obscureText: isPassword, // Añadido para manejar la contraseña
+      obscureText: isPassword,
+      keyboardType: keyboardType,
+      style: AppTextStyles.bodyText.copyWith(color: AppColors.white),
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: AppTextStyles.body.copyWith(color: AppColors.white70),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
         filled: true,
-        fillColor: Colors.white.withOpacity(0.8),
+        fillColor: AppColors.secondary,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: const BorderSide(color: AppColors.white54),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: const BorderSide(color: AppColors.accent, width: 2),
+        ),
       ),
     );
   }
 
-  // Widget genérico para los Dropdowns
   Widget _buildDropdown<T>(
     String label,
     T? selectedValue,
     List<T> items,
     void Function(T?) onChanged, {
-    String Function(T)? itemLabel, // Función para obtener el texto a mostrar
+    String Function(T)? itemLabel,
   }) {
-    // Si no se proporciona una función de etiqueta, asumimos que T es LocationModel
     final labelGetter = itemLabel ?? (item) => (item as LocationModel).name;
-
     return DropdownButtonFormField<T>(
+      dropdownColor: AppColors.secondary,
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: AppTextStyles.body.copyWith(color: AppColors.white70),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
         filled: true,
-        fillColor: Colors.white.withOpacity(0.8),
+        fillColor: AppColors.secondary,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: const BorderSide(color: AppColors.white54),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: const BorderSide(color: AppColors.accent, width: 2),
+        ),
       ),
       value: selectedValue,
       isExpanded: true,
       items: items.map<DropdownMenuItem<T>>((T value) {
         return DropdownMenuItem<T>(
           value: value,
-          child: Text(labelGetter(value)),
+          child: Text(
+            labelGetter(value),
+            style: AppTextStyles.bodyText.copyWith(color: AppColors.white),
+          ),
         );
       }).toList(),
       onChanged: onChanged,
@@ -209,20 +229,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Registro',
-          style: TextStyle(
-            color: Color.fromRGBO(52, 73, 94, 1),
-            fontWeight: FontWeight.bold,
-          ),
+          style: AppTextStyles.h2.copyWith(color: AppColors.accent),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.primary,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back,
-            color: Color.fromRGBO(52, 73, 94, 1),
-          ),
+          icon: const Icon(Icons.arrow_back, color: AppColors.accent),
           onPressed: () {
             Navigator.pop(context);
           },
@@ -233,10 +247,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color.fromRGBO(230, 240, 250, 1),
-              Color.fromRGBO(255, 255, 255, 1),
-            ],
+            colors: [AppColors.primary, AppColors.secondary],
           ),
         ),
         child: Center(
@@ -245,50 +256,54 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Padding(
               padding: const EdgeInsets.all(24.0),
               child: ListView(
-                // Cambiamos Column a ListView para manejar el scroll
                 children: <Widget>[
-                  const Text(
+                  Text(
                     'Crea una cuenta para solicitar servicios.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Color.fromRGBO(52, 73, 94, 1),
+                    style: AppTextStyles.bodyText.copyWith(
+                      color: AppColors.white70,
                     ),
                   ),
                   const SizedBox(height: 32),
                   _buildTextField(_nameController, 'Nombre Completo'),
                   const SizedBox(height: 16),
-                  _buildTextField(_emailController, 'Correo Electrónico'),
+                  _buildTextField(
+                    _emailController,
+                    'Correo Electrónico',
+                    keyboardType: TextInputType.emailAddress,
+                  ),
                   const SizedBox(height: 16),
-                  // Se actualiza para manejar la propiedad isPassword
                   _buildTextField(
                     _passwordController,
                     'Contraseña',
                     isPassword: true,
                   ),
                   const SizedBox(height: 16),
-                  _buildTextField(_phoneController, 'Teléfono'),
-
+                  _buildTextField(
+                    _phoneController,
+                    'Teléfono',
+                    keyboardType: TextInputType.phone,
+                  ),
                   const SizedBox(height: 32),
-
-                  // NUEVO: Interruptor para postularse como Técnico
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.8),
+                      color: AppColors.secondary,
                       borderRadius: BorderRadius.circular(15),
-                      border: Border.all(color: Colors.grey.shade300),
+                      border: Border.all(color: AppColors.white54),
                     ),
                     child: SwitchListTile(
-                      title: const Text(
+                      title: Text(
                         'Postularme como Técnico',
-                        style: TextStyle(
+                        style: AppTextStyles.bodyText.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: Color.fromRGBO(52, 73, 94, 1),
+                          color: AppColors.white,
                         ),
                       ),
-                      subtitle: const Text(
+                      subtitle: Text(
                         'Activar para recibir un correo con los requisitos de postulación.',
-                        style: TextStyle(fontSize: 12),
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.white70,
+                        ),
                       ),
                       value: _isTechnicianApplicant,
                       onChanged: (bool value) {
@@ -296,26 +311,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           _isTechnicianApplicant = value;
                         });
                       },
-                      activeColor: const Color.fromRGBO(39, 174, 96, 1),
+                      activeColor: AppColors.success,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(15),
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 32),
-
-                  const Text(
+                  Text(
                     'Dirección (Panamá)',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color.fromRGBO(52, 73, 94, 1),
-                    ),
+                    style: AppTextStyles.h4.copyWith(color: AppColors.accent),
                   ),
                   const SizedBox(height: 16),
-
-                  // 1. Dropdown de Provincias
                   _buildDropdown<LocationModel>(
                     'Provincia',
                     _selectedProvince,
@@ -332,8 +339,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-
-                  // 2. Dropdown de Distritos
                   _buildDropdown<LocationModel>(
                     'Distrito',
                     _selectedDistrict,
@@ -349,8 +354,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-
-                  // 3. Dropdown de Corregimientos
                   _buildDropdown<LocationModel>(
                     'Corregimiento',
                     _selectedCorregimiento,
@@ -362,33 +365,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-
-                  // 4. Campo Barrio
                   _buildTextField(_barrioController, 'Barrio / PH / Edificio'),
                   const SizedBox(height: 16),
-
-                  // 5. Campo Casa/Apartamento
                   _buildTextField(_casaController, 'Casa / Apartamento No.'),
-
                   const SizedBox(height: 32),
-
-                  // Botón de registro
                   ElevatedButton(
                     onPressed: _registerUser,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color.fromRGBO(39, 174, 96, 1),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                    ),
-                    child: const Text(
+                    child: Text(
                       'Registrarse',
-                      style: TextStyle(fontSize: 18),
+                      style: AppTextStyles.elevatedButton,
                     ),
                   ),
-                  const SizedBox(height: 50), // Espacio extra para el scroll
+                  const SizedBox(height: 50),
                 ],
               ),
             ),

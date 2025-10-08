@@ -40,8 +40,6 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
   TimeOfDay? _selectedTime;
   final TextEditingController _descriptionController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-
-  // Lista para almacenar los objetos File de las fotos seleccionadas
   final List<File> _selectedPhotos = [];
   final ImagePicker _picker = ImagePicker();
 
@@ -50,8 +48,6 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
     _descriptionController.dispose();
     super.dispose();
   }
-
-  // --- Lógica de la Cita ---
 
   bool _isFormValid() {
     return _selectedDate != null &&
@@ -109,7 +105,6 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
     }
   }
 
-  // Función para abrir la galería y seleccionar una foto
   Future<void> _addPhoto() async {
     final XFile? pickedFile = await _picker.pickImage(
       source: ImageSource.gallery,
@@ -130,7 +125,6 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
     }
   }
 
-  // Widget para mostrar las miniaturas de las fotos seleccionadas
   Widget _buildPhotoPreview() {
     if (_selectedPhotos.isEmpty) {
       return const SizedBox.shrink();
@@ -168,7 +162,11 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
                     child: const CircleAvatar(
                       radius: 10,
                       backgroundColor: AppColors.danger,
-                      child: Icon(Icons.close, size: 14, color: Colors.white),
+                      child: Icon(
+                        Icons.close,
+                        size: 14,
+                        color: AppColors.white,
+                      ),
                     ),
                   ),
                 ),
@@ -182,7 +180,6 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
 
   void _confirmAppointment() {
     if (_formKey.currentState!.validate() && _isFormValid()) {
-      // Lógica de confirmación real
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const LoadingScreen()),
@@ -199,8 +196,6 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
       );
     }
   }
-
-  // --- Widgets de Visualización ---
 
   Widget _buildProductDetail() {
     return Column(
@@ -255,17 +250,13 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Sección de Productos
             Text(
               'Servicios Seleccionados ($totalItems ítems)',
               style: AppTextStyles.h4.copyWith(color: AppColors.accent),
             ),
             const Divider(color: AppColors.white54, height: 16),
             _buildProductDetail(),
-
             const Divider(color: AppColors.white54, height: 20),
-
-            // Sección de Desglose de Costos
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -277,8 +268,6 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
               ],
             ),
             const SizedBox(height: 8),
-
-            // Descuento Llamativo
             if (widget.discountAmount > 0)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -299,15 +288,15 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
                   ),
                 ],
               ),
-
             if (widget.discountAmount > 0)
               const Divider(color: AppColors.white54, height: 24),
-
-            // Total a Pagar
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Total a Pagar:', style: AppTextStyles.h2.copyWith(color: AppColors.accent)),
+                Text(
+                  'Total a Pagar:',
+                  style: AppTextStyles.h2.copyWith(color: AppColors.accent),
+                ),
                 Text(
                   '\$${widget.totalCost.toStringAsFixed(2)}',
                   style: AppTextStyles.h1.copyWith(fontSize: 28),
@@ -354,7 +343,10 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Coordinar Cita'),
+        title: Text(
+          'Coordinar Cita',
+          style: AppTextStyles.h2.copyWith(color: AppColors.accent),
+        ),
         backgroundColor: AppColors.primary,
         iconTheme: const IconThemeData(color: AppColors.accent),
         titleTextStyle: AppTextStyles.h2.copyWith(color: AppColors.accent),
@@ -364,18 +356,13 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
         child: ListView(
           padding: const EdgeInsets.all(24.0),
           children: <Widget>[
-            // 1. Resumen de la Orden (Productos y Descuento)
             _buildOrderSummaryCard(),
             const SizedBox(height: 16),
-
-            // 2. Dirección de la Cita
             _buildAddressCard(),
             const SizedBox(height: 32),
-
-            // --- 3. SECCIÓN DE DESCRIPCIÓN ---
             Text(
               '3. Describe tu Requerimiento (Obligatorio)',
-              style: AppTextStyles.h4,
+              style: AppTextStyles.h4.copyWith(color: AppColors.accent),
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -392,6 +379,14 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
                 hintStyle: AppTextStyles.caption.copyWith(
                   color: AppColors.white54,
                 ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: const BorderSide(color: AppColors.white54),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: const BorderSide(color: AppColors.accent),
+                ),
               ),
               style: AppTextStyles.bodyText.copyWith(color: AppColors.white),
               validator: (value) {
@@ -404,13 +399,10 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
               },
               onChanged: (_) => setState(() {}),
             ),
-
             const SizedBox(height: 24),
-
-            // --- 4. SECCIÓN DE FOTOS Y PREVIEW ---
             Text(
               '4. Agrega Fotos del Daño (Opcional)',
-              style: AppTextStyles.h4,
+              style: AppTextStyles.h4.copyWith(color: AppColors.accent),
             ),
             const SizedBox(height: 12),
             ElevatedButton.icon(
@@ -428,11 +420,9 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
             ),
             _buildPhotoPreview(),
             const SizedBox(height: 32),
-
-            // 5. Selectores de Fecha y Hora
             Text(
               '5. Selecciona la Fecha y Hora (Obligatorio)',
-              style: AppTextStyles.h4,
+              style: AppTextStyles.h4.copyWith(color: AppColors.accent),
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
@@ -455,8 +445,6 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
               ),
             ),
             const SizedBox(height: 40),
-
-            // 6. Botón de Confirmación
             ElevatedButton(
               onPressed: canConfirm ? _confirmAppointment : null,
               style: ElevatedButton.styleFrom(

@@ -1,24 +1,25 @@
 package com.backend.servicejc.model;
 
 import com.google.cloud.firestore.annotation.DocumentId;
-import java.util.Date; 
+import java.util.Date;
 import java.util.List;
 
 public class Cita {
     @DocumentId
     private String id;
-    private String usuarioId; // ID del usuario que solicita la cita
-    private String tecnicoId; // ID del técnico asignado a la cita
-    private List<String>serviciosSeleccionados; // IDs de los servicios seleccionados
+    private String usuarioId;
+    private String tecnicoId;
+    private List<String> serviciosSeleccionados;
     private Date fechaHora;
-    private String estado; // Ej: "pendiente", "confirmada", "cancelada", "completada"
-    private double costoTotal; // Costo total de los servicios
+    private String estado;
+    private double costoTotal;
+    private String descripcion; // Campo agregado
 
     // Constructor vacío requerido por Firestore
     public Cita() {}
 
     // Constructor con todos los campos
-    public Cita(String id, String usuarioId, String tecnicoId, List<String> serviciosSeleccionados, Date fechaHora, String estado, double costoTotal) {
+    public Cita(String id, String usuarioId, String tecnicoId, List<String> serviciosSeleccionados, Date fechaHora, String estado, double costoTotal, String descripcion) {
         this.id = id;
         this.usuarioId = usuarioId;
         this.tecnicoId = tecnicoId;
@@ -26,6 +27,7 @@ public class Cita {
         this.fechaHora = fechaHora;
         this.estado = estado;
         this.costoTotal = costoTotal;
+        this.descripcion = descripcion;
     }
 
     // Getters y Setters
@@ -83,5 +85,13 @@ public class Cita {
 
     public void setCostoTotal(double costoTotal) {
         this.costoTotal = costoTotal;
+    }
+    
+    public String getDescripcion() {
+        return descripcion;
+    }
+
+    public void setDescripcion(String descripcion) {
+        this.descripcion = descripcion;
     }
 }

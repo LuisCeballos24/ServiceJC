@@ -3,6 +3,7 @@ import 'package:servicejc/models/product_model.dart';
 import 'package:servicejc/screens/location_selection_screen.dart';
 import 'package:servicejc/theme/app_colors.dart';
 import 'package:servicejc/theme/app_text_styles.dart';
+import '../services/service_data.dart'; // Importar la nueva clase
 
 class InstalacionesPorUnidadScreen extends StatefulWidget {
   const InstalacionesPorUnidadScreen({super.key});
@@ -14,179 +15,156 @@ class InstalacionesPorUnidadScreen extends StatefulWidget {
 
 class _InstalacionesPorUnidadScreenState
     extends State<InstalacionesPorUnidadScreen> {
-  // Lista mutable de servicios
   final List<Map<String, dynamic>> _servicios = [
     {
       'title': 'Electricidad',
       'price': 25.00,
       'isSelected': false,
       'originalTitle': 'Electricidad',
+      'id': 'electricidad_id',
     },
     {
       'title': 'Plomeria',
       'price': 25.00,
       'isSelected': false,
       'originalTitle': 'Plomeria',
+      'id': 'plomeria_id',
     },
     {
       'title': 'Instalaciones menores',
       'price': 25.00,
       'isSelected': false,
       'originalTitle': 'Instalaciones menores',
+      'id': 'instalaciones_menores_id',
     },
     {
       'title': 'Aire acondicionado (instalación y mantenimiento)',
       'price': 25.00,
       'isSelected': false,
       'originalTitle': 'Aire acondicionado (instalación y mantenimiento)',
+      'id': 'aire_acondicionado_id',
     },
     {
       'title': 'Pintores',
       'price': 25.00,
       'isSelected': false,
       'originalTitle': 'Pintores',
+      'id': 'pintores_id',
     },
     {
       'title': 'Ebanistas',
       'price': 25.00,
       'isSelected': false,
       'originalTitle': 'Ebanistas',
+      'id': 'ebanistas_id',
     },
     {
       'title': 'Soldadura',
       'price': 25.00,
       'isSelected': false,
       'originalTitle': 'Soldadura',
+      'id': 'soldadura_id',
     },
     {
       'title': 'Aluminio y vidrio',
       'price': 25.00,
       'isSelected': false,
       'originalTitle': 'Aluminio y vidrio',
+      'id': 'aluminio_y_vidrio_id',
     },
     {
       'title': 'Cielo raso',
       'price': 25.00,
       'isSelected': false,
       'originalTitle': 'Cielo raso',
+      'id': 'cielo_raso_id',
     },
     {
       'title': 'Instalaciones decorativas',
       'price': 25.00,
       'isSelected': false,
       'originalTitle': 'Instalaciones decorativas',
+      'id': 'instalaciones_decorativas_id',
     },
     {
       'title': 'Revestimientos de piso y paredes',
       'price': 25.00,
       'isSelected': false,
       'originalTitle': 'Revestimientos de piso y paredes',
+      'id': 'revestimientos_id',
     },
     {
       'title': 'Remodelaciones',
       'price': 25.00,
       'isSelected': false,
       'originalTitle': 'Remodelaciones',
+      'id': 'remodelaciones_id',
     },
     {
       'title': 'Construcción',
       'price': 25.00,
       'isSelected': false,
       'originalTitle': 'Construcción',
+      'id': 'construccion_id',
     },
     {
       'title': 'Mantenimientos preventivos',
       'price': 25.00,
       'isSelected': false,
       'originalTitle': 'Mantenimientos preventivos',
+      'id': 'mantenimientos_preventivos_id',
     },
     {
       'title': 'Limpieza de sillones',
       'price': 25.00,
       'isSelected': false,
       'originalTitle': 'Limpieza de sillones',
+      'id': 'limpieza_sillones_id',
     },
     {
       'title': 'Limpieza de áreas',
       'price': 25.00,
       'isSelected': false,
       'originalTitle': 'Limpieza de áreas',
+      'id': 'limpieza_areas_id',
     },
     {
       'title': 'Chefs',
       'price': 25.00,
       'isSelected': false,
       'originalTitle': 'Chefs',
+      'id': 'chefs_id',
     },
     {
       'title': 'Salonerros',
       'price': 25.00,
       'isSelected': false,
       'originalTitle': 'Salonerros',
+      'id': 'saloneros_id',
     },
     {
       'title': 'Bartender',
       'price': 25.00,
       'isSelected': false,
       'originalTitle': 'Bartender',
+      'id': 'bartender_id',
     },
     {
       'title': 'Decoraciones',
       'price': 25.00,
       'isSelected': false,
       'originalTitle': 'Decoraciones',
+      'id': 'decoraciones_id',
     },
     {
       'title': 'Otros',
       'price': 25.00,
       'isSelected': false,
       'originalTitle': 'Otros',
+      'id': 'otros_id',
     },
   ];
 
-  final Map<String, Map<String, dynamic>> _iconosPorServicio = {
-    'Electricidad': {'icon': Icons.power, 'color': Colors.amber[700]},
-    'Plomeria': {'icon': Icons.plumbing, 'color': Colors.blue[600]},
-    'Instalaciones menores': {
-      'icon': Icons.handyman,
-      'color': Colors.brown[400],
-    },
-    'Aire acondicionado (instalación y mantenimiento)': {
-      'icon': Icons.ac_unit,
-      'color': Colors.cyan[400],
-    },
-    'Pintores': {'icon': Icons.format_paint, 'color': Colors.pink[400]},
-    'Ebanistas': {'icon': Icons.chair, 'color': Colors.brown[700]},
-    'Soldadura': {'icon': Icons.engineering, 'color': Colors.grey[700]},
-    'Aluminio y vidrio': {'icon': Icons.window, 'color': Colors.blueGrey[400]},
-    'Cielo raso': {'icon': Icons.roofing, 'color': Colors.orange[400]},
-    'Instalaciones decorativas': {
-      'icon': Icons.design_services,
-      'color': Colors.purple[400],
-    },
-    'Revestimientos de piso y paredes': {
-      'icon': Icons.layers,
-      'color': Colors.teal[400],
-    },
-    'Remodelaciones': {'icon': Icons.construction, 'color': Colors.red[400]},
-    'Construcción': {'icon': Icons.apartment, 'color': Colors.green[400]},
-    'Mantenimientos preventivos': {
-      'icon': Icons.build_circle,
-      'color': Colors.lime[600],
-    },
-    'Limpieza de sillones': {
-      'icon': Icons.cleaning_services,
-      'color': Colors.indigo[400],
-    },
-    'Limpieza de áreas': {'icon': Icons.wash, 'color': Colors.lightBlue[400]},
-    'Chefs': {'icon': Icons.restaurant_menu, 'color': Colors.orange[700]},
-    'Salonerros': {'icon': Icons.room_service, 'color': Colors.deepOrange[400]},
-    'Bartender': {'icon': Icons.local_bar, 'color': Colors.lightGreen[600]},
-    'Decoraciones': {'icon': Icons.cake, 'color': Colors.pink[300]},
-    'Otros': {'icon': Icons.more_horiz, 'color': Colors.grey[500]},
-  };
-
-  // --- LÓGICA DE DESCUENTOS Y TOTALES ---
   List<Map<String, dynamic>> _getSelectedServices() {
     return _servicios.where((s) => s['isSelected'] == true).toList();
   }
@@ -199,9 +177,9 @@ class _InstalacionesPorUnidadScreenState
   }
 
   double _getDiscountPercentage(int totalItems) {
-    if (totalItems >= 4) return 0.12; // 12%
-    if (totalItems == 3) return 0.08; // 8%
-    if (totalItems == 2) return 0.05; // 5%
+    if (totalItems >= 4) return 0.12;
+    if (totalItems == 3) return 0.08;
+    if (totalItems == 2) return 0.05;
     return 0.0;
   }
 
@@ -232,12 +210,10 @@ class _InstalacionesPorUnidadScreenState
     final Map<ProductModel, int> selectedProducts = {
       for (var service in selectedServices)
         ProductModel(
-          // CORRECCIÓN APLICADA AQUÍ
-          id: service['originalTitle'],
+          id: service['id'],
           nombre: service['title'],
           costo: service['price'],
-          servicioId:
-              'instalacion_por_unidad', // ID genérico para esta pantalla
+          servicioId: 'instalacion_por_unidad',
         ): 1,
     };
 
@@ -258,17 +234,19 @@ class _InstalacionesPorUnidadScreenState
   Widget build(BuildContext context) {
     final selectedCount = _getSelectedServices().length;
     return Scaffold(
-      appBar: AppBar(title: const Text('Instalaciones por Unidad')),
+      appBar: AppBar(
+        title: Text(
+          'Instalaciones por Unidad',
+          style: AppTextStyles.h2.copyWith(color: AppColors.accent),
+        ),
+        backgroundColor: AppColors.primary,
+        iconTheme: const IconThemeData(color: AppColors.accent),
+      ),
       body: Column(
         children: [
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(
-                16,
-                16,
-                16,
-                100,
-              ), // Espacio para el summary
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
               itemCount: _servicios.length,
               itemBuilder: (context, index) {
                 return _buildServiceCheckbox(_servicios[index]);
@@ -284,7 +262,9 @@ class _InstalacionesPorUnidadScreenState
   Widget _buildServiceCheckbox(Map<String, dynamic> servicio) {
     final String titulo = servicio['title'];
     final String originalTitle = servicio['originalTitle'];
-    final Map<String, dynamic>? iconoData = _iconosPorServicio[originalTitle];
+    final Map<String, dynamic>? iconoData = ServiceData.getServiceData(
+      originalTitle,
+    );
 
     return Card(
       elevation: 2,
@@ -293,12 +273,12 @@ class _InstalacionesPorUnidadScreenState
       child: CheckboxListTile(
         title: Text(
           titulo,
-          style: const TextStyle(fontWeight: FontWeight.w600),
+          style: AppTextStyles.bodyText.copyWith(fontWeight: FontWeight.w600),
         ),
         subtitle: Text(
           'B/. ${servicio['price'].toStringAsFixed(2)}',
-          style: const TextStyle(
-            color: Colors.green,
+          style: AppTextStyles.listSubtitle.copyWith(
+            color: AppColors.success,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -319,7 +299,7 @@ class _InstalacionesPorUnidadScreenState
         },
         secondary: Icon(
           iconoData?['icon'] ?? Icons.help_outline,
-          color: iconoData?['color'] ?? Colors.black,
+          color: iconoData?['color'] ?? AppColors.cardTitle,
           size: 30,
         ),
         activeColor: AppColors.success,
@@ -337,18 +317,32 @@ class _InstalacionesPorUnidadScreenState
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          title: const Text('Especificar Servicio'),
+          title: Text('Especificar Servicio', style: AppTextStyles.modalTitle),
           content: TextField(
             controller: controller,
             autofocus: true,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               hintText: 'Ej: Instalar caja de fusibles',
+              hintStyle: AppTextStyles.bodyText.copyWith(
+                color: AppColors.white54,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              filled: true,
+              fillColor: AppColors.secondary,
             ),
+            style: AppTextStyles.bodyText.copyWith(color: AppColors.white),
           ),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
+              child: Text(
+                'Cancelar',
+                style: AppTextStyles.modalButton.copyWith(
+                  color: AppColors.error,
+                ),
+              ),
             ),
             ElevatedButton(
               onPressed: () {
@@ -360,7 +354,10 @@ class _InstalacionesPorUnidadScreenState
                   Navigator.of(context).pop();
                 }
               },
-              child: const Text('Aceptar'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.elevatedButton,
+              ),
+              child: Text('Aceptar', style: AppTextStyles.modalButton),
             ),
           ],
         );

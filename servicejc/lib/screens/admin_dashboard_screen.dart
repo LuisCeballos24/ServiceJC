@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart'; // Importar la librería de gráficos
+import 'package:fl_chart/fl_chart.dart';
 import 'package:servicejc/models/tecnico.dart';
+import 'package:servicejc/screens/citas_screen.dart'; // Importar la nueva pantalla de Citas
+import 'package:servicejc/screens/clients_screen.dart'; // Importar la nueva pantalla de Clientes
+import 'package:servicejc/screens/tecnicos_screen.dart'; // Importar la nueva pantalla de Tecnicos
 import '../services/admin_api_service.dart';
-import 'admin_management_screen.dart'; // Importar la nueva pantalla
+import '../services/auth_service.dart'; // Importar el servicio de autenticación
+import 'admin_management_screen.dart';
+import 'login_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 
@@ -42,7 +47,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
-  // Función de utilidad para crear una tarjeta de métrica
+  void _logout() async {
+    final authService = AuthService();
+    await authService.signOut();
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+      (Route<dynamic> route) => false,
+    );
+  }
+
   Widget _buildMetricCard({
     required String title,
     required String value,
@@ -83,12 +97,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // Widget para el gráfico de barras (simulación simple)
   Widget _buildBarChart(List<Tecnico> tecnicos) {
     List<BarChartGroupData> barGroups = tecnicos.asMap().entries.map((entry) {
       final int index = entry.key;
       final Tecnico tecnico = entry.value;
-      // Usaremos un valor simulado para la altura (ej: la cantidad de citas completadas)
       final double y = (index + 1) * 10.0;
 
       return BarChartGroupData(
@@ -135,9 +147,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     axisSide: meta.axisSide,
                     angle: -0.8,
                     child: Text(
-                      tecnicos[value.toInt()].nombre.split(
-                        ' ',
-                      )[0], // Muestra solo el primer nombre
+                      tecnicos[value.toInt()].nombre.split(' ')[0],
                       style: AppTextStyles.caption.copyWith(
                         color: AppColors.white70,
                       ),
@@ -172,16 +182,52 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  Widget _buildOptionCard({
+    required String title,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      color: AppColors.secondary,
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(15),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 40, color: AppColors.accent),
+              const SizedBox(height: 10),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.h4.copyWith(color: AppColors.white),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Panel de Administración',
-          style: TextStyle(color: AppColors.accent),
+          style: AppTextStyles.h2.copyWith(color: AppColors.accent),
         ),
         backgroundColor: AppColors.primary,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: AppColors.accent),
+            onPressed: _logout,
+            tooltip: 'Cerrar Sesión',
+          ),
           IconButton(
             icon: const Icon(Icons.settings, color: AppColors.accent),
             onPressed: () {
@@ -221,7 +267,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Dashboard de Métricas
                   GridView.count(
                     crossAxisCount: 2,
                     crossAxisSpacing: 16,
@@ -249,16 +294,59 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ),
                       _buildMetricCard(
                         title: 'Total Usuarios',
-                        value:
-                            'N/A', // Puedes agregar esta métrica al backend si es necesaria
+                        value: 'N/A',
                         icon: Icons.person_add,
                         color: AppColors.accent,
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 32),
-                  // Gráfico de Barras
+                  GridView.count(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      _buildOptionCard(
+                        title: 'Gestión de Técnicos',
+                        icon: Icons.people,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const TecnicosScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      _buildOptionCard(
+                        title: 'Gestión de Citas',
+                        icon: Icons.calendar_month,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const CitasScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      _buildOptionCard(
+                        title: 'Gestión de Clientes',
+                        icon: Icons.person,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ClientsScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
                   Text(
                     'Técnicos más destacados (por citas completadas)',
                     style: AppTextStyles.h2.copyWith(color: AppColors.white),
@@ -272,44 +360,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             color: AppColors.white54,
                           ),
                         ),
-
                   const SizedBox(height: 32),
-
-                  // Lista de técnicos (como antes)
-                  Text(
-                    'Gestión de Técnicos',
-                    style: AppTextStyles.h2.copyWith(color: AppColors.white),
-                  ),
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: tecnicos.length,
-                    itemBuilder: (context, index) {
-                      final tecnico = tecnicos[index];
-                      return Card(
-                        color: AppColors.secondary,
-                        child: ListTile(
-                          title: Text(
-                            tecnico.nombre,
-                            style: AppTextStyles.listTitle,
-                          ),
-                          subtitle: Text(
-                            'Correo: ${tecnico.correo}',
-                            style: AppTextStyles.listSubtitle.copyWith(
-                              color: AppColors.white70,
-                            ),
-                          ),
-                          trailing: IconButton(
-                            icon: const Icon(
-                              Icons.delete,
-                              color: AppColors.danger,
-                            ),
-                            onPressed: () => _eliminarTecnico(tecnico.correo),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
                 ],
               ),
             );

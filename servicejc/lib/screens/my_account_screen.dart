@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:servicejc/screens/user_appointments_screen.dart';
 import 'package:servicejc/screens/admin_dashboard_screen.dart';
-import 'package:servicejc/theme/app_colors.dart';
-import 'package:servicejc/theme/app_text_styles.dart';
+import 'package:servicejc/screens/technician_panel_screen.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_text_styles.dart';
 
 class MyAccountScreen extends StatefulWidget {
   const MyAccountScreen({super.key});
@@ -57,7 +58,7 @@ class _MyAccountScreenState extends State<MyAccountScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (_userRole == 'ADMINISTRATIVO' || _userRole == 'TECNICO')
+              if (_userRole == 'ADMINISTRATIVO')
                 _buildOptionCard(
                   context,
                   title: 'Panel de Administración',
@@ -67,6 +68,20 @@ class _MyAccountScreenState extends State<MyAccountScreen> {
                       context,
                       MaterialPageRoute(
                         builder: (context) => AdminDashboardScreen(),
+                      ),
+                    );
+                  },
+                ),
+              if (_userRole == 'TECNICO')
+                _buildOptionCard(
+                  context,
+                  title: 'Panel de Técnico',
+                  icon: Icons.engineering,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const TechnicianPanelScreen(),
                       ),
                     );
                   },

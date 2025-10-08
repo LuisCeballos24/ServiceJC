@@ -1,43 +1,53 @@
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 
-class CustomCarousel extends StatelessWidget {
+class CustomCarousel extends StatefulWidget {
+  const CustomCarousel({super.key});
+
+  @override
+  State<CustomCarousel> createState() => _CustomCarouselState();
+}
+
+class _CustomCarouselState extends State<CustomCarousel> {
+  final CarouselSliderController _controller = CarouselSliderController();
+  int _current = 0;
   final List<String> images = [
-    "https://lh3.googleusercontent.com/pw/AP1GczMX-uJoBacGJDRcQNei0Nywj9MlfX-vftkv3ja8qqE5XITBeTfz5MSpHio8scU2WJW8EPplvqSP1NHE1EZ5kkCtgfGVxwD4fvBMaEXe3QS0k9glxXXYZpqChbPyzNXuG1d6QywIBmOcTOnnw3INL_ew5g=w1248-h832-s-no-gm?authuser=0",
     "https://picsum.photos/600/400?random=2",
     "https://picsum.photos/600/400?random=3",
     "https://picsum.photos/600/400?random=4",
   ];
 
-  CustomCarousel({super.key});
+  @override
+  void dispose() {
+    // Detener el autoplay antes de dispose para evitar errores
+    _controller.stopAutoPlay();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        CarouselSlider(
+        CarouselSlider.builder(
+          carouselController: _controller,
+          itemCount: images.length,
+          itemBuilder: (context, index, _) => ClipRRect(
+            borderRadius: BorderRadius.circular(15),
+            child: Image.network(images[index], fit: BoxFit.cover),
+          ),
           options: CarouselOptions(
             height: 200,
-            autoPlay: true,
-            autoPlayInterval: const Duration(seconds: 3),
+            autoPlay: false,
             enlargeCenterPage: true,
             viewportFraction: 0.8,
-            aspectRatio: 16 / 9,
-            scrollDirection: Axis.horizontal,
+            onPageChanged: (index, reason) {
+              if (mounted) {
+                setState(() => _current = index);
+              }
+            },
           ),
-          items: images.map((item) {
-            return ClipRRect(
-              borderRadius: BorderRadius.circular(15),
-              child: Image.network(
-                item,
-                fit: BoxFit.cover,
-                width: double.infinity,
-              ),
-            );
-          }).toList(),
         ),
         const SizedBox(height: 10),
-        // Indicadores
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(
@@ -48,7 +58,9 @@ class CustomCarousel extends StatelessWidget {
               height: 10,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.blue.withOpacity(0.5),
+                color: _current == index
+                    ? Colors.blueAccent
+                    : Colors.blue.withOpacity(0.4),
               ),
             ),
           ),

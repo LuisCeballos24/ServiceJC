@@ -1,12 +1,15 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/tecnico.dart';
+import 'package:servicejc/models/user_model.dart';
+import 'api_service.dart'; // Asegúrate de que este import sea correcto
 
-class AdminApiService {
-  final String _baseUrl = 'http://localhost:8080/api/admin'; // Usa la URL de tu API
-
+class AdminApiService extends ApiService {
   Future<Map<String, dynamic>> getDashboardMetrics() async {
-    final response = await http.get(Uri.parse('$_baseUrl/metrics'));
+    final response = await http.get(
+      Uri.parse('$baseUrl/admin/metrics'),
+      headers: getHeaders(),
+    );
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -16,27 +19,61 @@ class AdminApiService {
   }
 
   Future<void> eliminarTecnico(String tecnicoId) async {
-    final response = await http.delete(Uri.parse('$_baseUrl/tecnicos/$tecnicoId'));
+    final response = await http.delete(
+      Uri.parse('$baseUrl/admin/tecnicos/$tecnicoId'),
+      headers: getHeaders(),
+    );
 
-    if (response.statusCode != 200) {
+    if (response.statusCode != 204) {
       throw Exception('Error al eliminar el técnico');
     }
   }
 
-  Future<void> reasignarCita(String citaId, String nuevoTecnicoId, DateTime nuevaFechaHora) async {
+  Future<void> reasignarCita(
+    String citaId,
+    String nuevoTecnicoId,
+    DateTime nuevaFechaHora,
+  ) async {
     final response = await http.patch(
-      Uri.parse('$_baseUrl/citas/$citaId/reasignar'),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
+      Uri.parse('$baseUrl/admin/citas/$citaId/reasignar'),
+      headers: getHeaders(),
       body: jsonEncode(<String, dynamic>{
         'nuevoTecnicoId': nuevoTecnicoId,
-        'nuevaFechaHora': nuevaFechaHora.toIso8601String(), // Formato ISO 8601 para la fecha y hora
+        'nuevaFechaHora': nuevaFechaHora.toIso8601String(),
       }),
     );
 
     if (response.statusCode != 200) {
       throw Exception('Error al reasignar la cita');
+    }
+  }
+
+  Future<List<UserModel>> getClients() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/admin/clients'),
+      headers: getHeaders(),
+    );
+
+    if (response.statusCode == 200) {
+      Iterable data = json.decode(response.body);
+      return List<UserModel>.from(
+        data.map((model) => UserModel.fromJson(model)),
+      );
+    } else {
+      throw Exception(
+        'Error al obtener la lista de clientes: ${response.body}',
+      );
+    }
+  }
+
+  Future<void> deleteUser(String userId) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/admin/clients/$userId'),
+      headers: getHeaders(),
+    );
+
+    if (response.statusCode != 204) {
+      throw Exception('Error al eliminar el usuario: ${response.body}');
     }
   }
 }

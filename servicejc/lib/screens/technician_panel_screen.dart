@@ -1,21 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:servicejc/theme/app_colors.dart';
 import 'package:servicejc/theme/app_text_styles.dart';
-
-// Importa los modelos desde sus respectivos archivos
 import 'package:servicejc/models/cita_model.dart';
 import 'package:servicejc/models/user_model.dart';
 import 'package:servicejc/models/product_model.dart';
 import 'package:servicejc/models/user_address_model.dart';
-// Este modelo está en tu archivo original, así que lo importamos.
 
-// Clase de simulación de un servicio que obtiene las citas asignadas
 class CitaService {
   Future<List<CitaModel>> fetchCitasAsignadas(String technicianId) async {
-    // Simula un retraso de red
     await Future.delayed(const Duration(seconds: 2));
-
-    // Datos de ejemplo para la lista de citas
     return [
       CitaModel(
         id: 'cita_001',
@@ -101,7 +94,7 @@ class TechnicianPanelScreen extends StatefulWidget {
 class _TechnicianPanelScreenState extends State<TechnicianPanelScreen> {
   late Future<List<CitaModel>> _futureCitas;
   final CitaService _citaService = CitaService();
-  final String _technicianId = 'tech_001'; // ID de técnico simulado
+  final String _technicianId = 'tech_001';
 
   @override
   void initState() {
@@ -110,23 +103,25 @@ class _TechnicianPanelScreenState extends State<TechnicianPanelScreen> {
   }
 
   void _confirmarCita(String citaId) {
-    // Lógica para enviar la confirmación a Firebase
-    // En un proyecto real, esto actualizaría el campo 'status' a 'Confirmada'
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Cita $citaId confirmada exitosamente.')),
+      SnackBar(
+        content: Text(
+          'Cita $citaId confirmada exitosamente.',
+          style: AppTextStyles.bodyText.copyWith(color: AppColors.white),
+        ),
+      ),
     );
-    // Vuelve a cargar la lista para reflejar el cambio (si el estado se actualiza)
     setState(() {
       _futureCitas = _citaService.fetchCitasAsignadas(_technicianId);
     });
   }
 
   Widget _buildCitaCard(CitaModel cita) {
-    // Usa el UserAddressModel para acceder correctamente a los detalles de la dirección
     final UserAddressModel? address = cita.cliente?.direccion;
 
     return Card(
       elevation: 4,
+      color: AppColors.secondary,
       margin: const EdgeInsets.symmetric(vertical: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: Padding(
@@ -139,61 +134,48 @@ class _TechnicianPanelScreenState extends State<TechnicianPanelScreen> {
               style: AppTextStyles.h4.copyWith(color: AppColors.accent),
             ),
             const Divider(color: AppColors.white54, height: 20),
-
-            // Nombre del Cliente
             Row(
               children: [
-                const Icon(Icons.person, color: AppColors.primary, size: 20),
+                const Icon(Icons.person, color: AppColors.white, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   cita.cliente?.nombre ?? 'Cliente Desconocido',
-                  style: AppTextStyles.h3,
+                  style: AppTextStyles.h3.copyWith(color: AppColors.white),
                 ),
               ],
             ),
             const SizedBox(height: 10),
-
-            // Fecha y Hora
             Row(
               children: [
-                const Icon(
-                  Icons.access_time,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
+                const Icon(Icons.access_time, color: AppColors.white, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   '${cita.hora}, ${cita.fecha.day}/${cita.fecha.month}/${cita.fecha.year}',
-                  style: AppTextStyles.listSubtitle,
+                  style: AppTextStyles.listSubtitle.copyWith(
+                    color: AppColors.white,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 10),
-
-            // Dirección
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
-                  Icons.location_on,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
+                const Icon(Icons.location_on, color: AppColors.white, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     '${address?.barrio ?? 'N/A'}, ${address?.house ?? 'N/A'} - ${address?.corregimiento ?? 'N/A'}, ${address?.district ?? 'N/A'}, ${address?.province ?? 'N/A'}',
-                    style: AppTextStyles.listSubtitle,
+                    style: AppTextStyles.listSubtitle.copyWith(
+                      color: AppColors.white70,
+                    ),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 2,
                   ),
                 ),
               ],
             ),
-
             const SizedBox(height: 15),
-
-            // Botón de Confirmar Cita
             Align(
               alignment: Alignment.centerRight,
               child: ElevatedButton.icon(
@@ -202,7 +184,7 @@ class _TechnicianPanelScreenState extends State<TechnicianPanelScreen> {
                   Icons.check,
                   color: AppColors.elevatedButtonForeground,
                 ),
-                label: const Text('Confirmar Cita'),
+                label: Text('Confirmar Cita', style: AppTextStyles.button),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.success,
                   padding: const EdgeInsets.symmetric(
@@ -224,36 +206,57 @@ class _TechnicianPanelScreenState extends State<TechnicianPanelScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Panel de Técnico')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: FutureBuilder<List<CitaModel>>(
-          future: _futureCitas,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(color: AppColors.accent),
-              );
-            } else if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return Center(
-                child: Text(
-                  'No tienes citas asignadas.',
-                  style: AppTextStyles.h3.copyWith(color: AppColors.primary),
-                ),
-              );
-            } else {
-              final citas = snapshot.data!;
-              return ListView.builder(
-                itemCount: citas.length,
-                itemBuilder: (context, index) {
-                  final cita = citas[index];
-                  return _buildCitaCard(cita);
-                },
-              );
-            }
-          },
+      appBar: AppBar(
+        title: Text(
+          'Panel de Técnico',
+          style: AppTextStyles.h2.copyWith(color: AppColors.accent),
+        ),
+        backgroundColor: AppColors.primary,
+        iconTheme: const IconThemeData(color: AppColors.accent),
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppColors.primary, AppColors.secondary],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: FutureBuilder<List<CitaModel>>(
+            future: _futureCitas,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(color: AppColors.accent),
+                );
+              } else if (snapshot.hasError) {
+                return Center(
+                  child: Text(
+                    'Error: ${snapshot.error}',
+                    style: AppTextStyles.h3.copyWith(color: AppColors.white),
+                  ),
+                );
+              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return Center(
+                  child: Text(
+                    'No tienes citas asignadas.',
+                    style: AppTextStyles.h3.copyWith(color: AppColors.white),
+                  ),
+                );
+              } else {
+                final citas = snapshot.data!;
+                return ListView.builder(
+                  itemCount: citas.length,
+                  itemBuilder: (context, index) {
+                    final cita = citas[index];
+                    return _buildCitaCard(cita);
+                  },
+                );
+              }
+            },
+          ),
         ),
       ),
     );

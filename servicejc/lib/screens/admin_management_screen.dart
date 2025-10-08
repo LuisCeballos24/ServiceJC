@@ -3,12 +3,12 @@ import 'package:servicejc/models/appointment_model.dart';
 import 'package:servicejc/models/user_model.dart';
 import 'package:servicejc/models/user_address_model.dart';
 import 'package:servicejc/models/location_model.dart';
-import 'package:servicejc/models/service_model.dart'; // Nuevo
-import 'package:servicejc/models/product_model.dart'; // Nuevo
+import 'package:servicejc/models/service_model.dart';
+import 'package:servicejc/models/product_model.dart';
 import 'package:servicejc/services/auth_service.dart';
 import 'package:servicejc/services/location_service.dart';
-import 'package:servicejc/services/servicio_service.dart'; // Nuevo
-import 'package:servicejc/services/user_api_service.dart'; // Usado para crear la cita
+import 'package:servicejc/services/servicio_service.dart';
+import 'package:servicejc/services/user_api_service.dart';
 import 'package:servicejc/theme/app_colors.dart';
 import 'package:servicejc/theme/app_text_styles.dart';
 
@@ -39,7 +39,10 @@ class _AdminManagementScreenState extends State<AdminManagementScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Gestión de Clientes y Citas'),
+        title: Text(
+          'Gestión de Clientes y Citas',
+          style: AppTextStyles.h2.copyWith(color: AppColors.accent),
+        ),
         backgroundColor: AppColors.primary,
         bottom: TabBar(
           controller: _tabController,
@@ -70,19 +73,13 @@ class _AdminManagementScreenState extends State<AdminManagementScreen>
         ),
         child: TabBarView(
           controller: _tabController,
-          children: const [
-            _BuildCreateUserTab(),
-            _BuildCreateAppointmentTab(), // Nueva pestaña implementada
-          ],
+          children: const [_BuildCreateUserTab(), _BuildCreateAppointmentTab()],
         ),
       ),
     );
   }
 }
 
-// =====================================================================
-// Pestaña 1: Creación de Usuarios/Técnicos (Sin cambios)
-// =====================================================================
 class _BuildCreateUserTab extends StatefulWidget {
   const _BuildCreateUserTab({Key? key}) : super(key: key);
   @override
@@ -421,9 +418,6 @@ class __BuildCreateUserTabState extends State<_BuildCreateUserTab> {
   }
 }
 
-// =====================================================================
-// Pestaña 2: Creación de Citas para Cliente
-// =====================================================================
 class _BuildCreateAppointmentTab extends StatefulWidget {
   const _BuildCreateAppointmentTab({Key? key}) : super(key: key);
 
@@ -439,15 +433,13 @@ class __BuildCreateAppointmentTabState
   final UserApiService _userApiService = UserApiService();
   final ServicioService _servicioService = ServicioService();
 
-  // Estados del formulario
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
-  String? _selectedClientId; // Usaremos el ID (correo) del cliente
+  String? _selectedClientId;
   ServiceModel? _selectedService;
   ProductModel? _selectedProduct;
   double _costoTotal = 0.0;
 
-  // Datos de carga
   Future<List<ServiceModel>>? _servicesFuture;
   Future<List<ProductModel>>? _productsFuture;
   Future<List<UserModel>>? _clientsFuture;
@@ -456,8 +448,6 @@ class __BuildCreateAppointmentTabState
   void initState() {
     super.initState();
     _servicesFuture = _servicioService.fetchServicios();
-    // Simulación: asumimos que hay un endpoint para obtener clientes/usuarios finales.
-    // Si no existe, este fetchClients debe implementarse en el backend.
     _clientsFuture = _fetchClients();
   }
 
@@ -467,10 +457,7 @@ class __BuildCreateAppointmentTabState
     super.dispose();
   }
 
-  // Función simulada para obtener clientes (debes implementar el endpoint en Java)
   Future<List<UserModel>> _fetchClients() async {
-    // Esta es una SIMULACIÓN. En tu backend, deberías crear un endpoint
-    // en AdminController para obtener una lista de usuarios de rol USUARIO_FINAL.
     await Future.delayed(const Duration(milliseconds: 500));
     return [
       UserModel(
@@ -575,38 +562,25 @@ class __BuildCreateAppointmentTabState
 
       try {
         final appointment = AppointmentModel(
-          id: '', // Será generado por el backend
+          id: '',
           clienteId: _selectedClientId!,
-          // Usamos el ID del correo como Técnico ID (asumiendo que el admin se asigna a sí mismo o se define después)
           tecnicoId: 'admin_scheduled',
           servicioId: _selectedService!.id,
           fechaHora: appointmentDateTime.toIso8601String(),
-          status: 'confirmada', // Estado inicial forzado
+          status: 'confirmada',
         );
 
-        // **Aviso**: El endpoint de crear cita en tu backend (`/api/citas`)
-        // espera un modelo 'Cita.java' que tiene `List<String> serviciosSeleccionados`
-        // y `costoTotal`. El AppointmentModel de Flutter actual no mapea a esto
-        // perfectamente, pero vamos a forzar la estructura que tu backend necesita.
-
-        // Simulación de envío de datos ajustado a la estructura que el backend podría esperar
         final Map<String, dynamic> citaData = {
           'usuarioId': _selectedClientId,
-          // Mapeamos el producto seleccionado al campo de servicios seleccionados (asumiendo que es una lista de IDs de producto)
           'serviciosSeleccionados': [_selectedProduct!.id],
           'fechaHora': appointmentDateTime.toIso8601String(),
           'estado': 'confirmada',
           'costoTotal': _costoTotal,
           'descripcion': _descriptionController.text,
-          'tecnicoId': appointment.tecnicoId, // 'admin_scheduled'
+          'tecnicoId': appointment.tecnicoId,
         };
 
-        // NOTA: El UserApiService no tiene un método para crear cita, usamos AuthService.
-        // Asumiendo que el método createCita se mueve a UserApiService, o se usa AppointmentService
-        // Aquí vamos a usar AppointmentService (debe importarse)
-        await _userApiService.createAppointment(
-          citaData,
-        ); // Enviamos el mapa de datos.
+        await _userApiService.createAppointment(citaData);
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -655,7 +629,6 @@ class __BuildCreateAppointmentTabState
             ),
             const SizedBox(height: 24),
 
-            // 1. Selección de Cliente
             FutureBuilder<List<UserModel>>(
               future: _clientsFuture,
               builder: (context, snapshot) {
@@ -673,7 +646,12 @@ class __BuildCreateAppointmentTabState
                       .map(
                         (c) => DropdownMenuItem(
                           value: c.correo,
-                          child: Text('${c.nombre} (${c.correo})'),
+                          child: Text(
+                            '${c.nombre} (${c.correo})',
+                            style: AppTextStyles.bodyText.copyWith(
+                              color: AppColors.white,
+                            ),
+                          ),
                         ),
                       )
                       .toList(),
@@ -687,7 +665,6 @@ class __BuildCreateAppointmentTabState
             ),
             const SizedBox(height: 16),
 
-            // 2. Selección de Servicio
             FutureBuilder<List<ServiceModel>>(
               future: _servicesFuture,
               builder: (context, snapshot) {
@@ -703,8 +680,15 @@ class __BuildCreateAppointmentTabState
                   _selectedService,
                   services
                       .map(
-                        (s) =>
-                            DropdownMenuItem(value: s, child: Text(s.nombre)),
+                        (s) => DropdownMenuItem(
+                          value: s,
+                          child: Text(
+                            s.nombre,
+                            style: AppTextStyles.bodyText.copyWith(
+                              color: AppColors.white,
+                            ),
+                          ),
+                        ),
                       )
                       .toList(),
                   _updateProducts,
@@ -713,7 +697,6 @@ class __BuildCreateAppointmentTabState
             ),
             const SizedBox(height: 16),
 
-            // 3. Selección de Producto
             FutureBuilder<List<ProductModel>>(
               future: _productsFuture,
               builder: (context, snapshot) {
@@ -741,6 +724,9 @@ class __BuildCreateAppointmentTabState
                           value: p,
                           child: Text(
                             '${p.nombre} (\$${p.costo.toStringAsFixed(2)})',
+                            style: AppTextStyles.bodyText.copyWith(
+                              color: AppColors.white,
+                            ),
                           ),
                         ),
                       )
@@ -752,7 +738,6 @@ class __BuildCreateAppointmentTabState
             ),
             const SizedBox(height: 24),
 
-            // 4. Descripción del Requerimiento
             TextFormField(
               controller: _descriptionController,
               maxLines: 3,
@@ -762,7 +747,6 @@ class __BuildCreateAppointmentTabState
             ),
             const SizedBox(height: 24),
 
-            // 5. Selección de Fecha y Hora
             ElevatedButton.icon(
               onPressed: () => _selectDateTime(context),
               icon: const Icon(Icons.calendar_today, color: AppColors.primary),
@@ -777,14 +761,12 @@ class __BuildCreateAppointmentTabState
             ),
             const SizedBox(height: 24),
 
-            // 6. Resumen de Costo
             Text(
               'Costo Estimado: \$${_costoTotal.toStringAsFixed(2)}',
               style: AppTextStyles.h3.copyWith(color: AppColors.success),
             ),
             const SizedBox(height: 24),
 
-            // 7. Botón de Creación
             ElevatedButton.icon(
               onPressed: _createAppointment,
               icon: const Icon(Icons.check_circle_outline),
@@ -807,7 +789,6 @@ class __BuildCreateAppointmentTabState
     );
   }
 
-  // Widget de ayuda para Dropdowns
   Widget _buildCustomDropdown<T>(
     String label,
     T? selectedValue,
@@ -827,7 +808,6 @@ class __BuildCreateAppointmentTabState
     );
   }
 
-  // Widget de ayuda para el estilo de inputs
   InputDecoration _getAdminInputDecoration(String label) {
     return InputDecoration(
       labelText: label,

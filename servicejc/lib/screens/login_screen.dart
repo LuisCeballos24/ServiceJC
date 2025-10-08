@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:servicejc/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:servicejc/screens/register_screen.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_text_styles.dart';
 
 class LoginScreen extends StatefulWidget {
-  // Aseguramos que 'purpose' esté aquí, aunque ya no lo usemos para la navegación principal.
   final String purpose;
   const LoginScreen({super.key, this.purpose = 'initial'});
 
@@ -26,40 +27,47 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _login() async {
-    // 1. Validar el formulario
     if (_formKey.currentState!.validate()) {
       try {
         final String email = _emailController.text;
         final String password = _passwordController.text;
-
-        // 2. Intentar autenticar y obtener la respuesta (token, rol, userId)
         final response = await _authService.loginUser(email, password);
 
-        // 3. GUARDAR LA SESIÓN (Token, Rol y ID)
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('authToken', response.token);
+
         if (response.rol != null) {
           await prefs.setString('userRole', response.rol!);
+        } else {
+          await prefs.remove('userRole');
         }
+
         if (response.userId != null) {
           await prefs.setString('userId', response.userId!);
+        } else {
+          await prefs.remove('userId');
         }
 
-        // 4. Feedback al usuario
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Login exitoso. Bienvenido de nuevo.')),
+          SnackBar(
+            content: Text(
+              'Login exitoso. Bienvenido de nuevo.',
+              style: AppTextStyles.bodyText.copyWith(color: AppColors.white),
+            ),
+          ),
         );
 
-        // 5. Redirección a la pantalla principal
-        // Utilizamos pushReplacement para limpiar la pila y que no pueda regresar al login.
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          '/', // Redirige a la ruta raíz (WelcomeClientScreen, si está configurada así)
-          (Route<dynamic> route) => false, // Elimina todas las rutas de la pila
-        );
+        Navigator.of(
+          context,
+        ).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
       } catch (e) {
-        // Manejo de errores de autenticación
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error de login: ${e.toString()}')),
+          SnackBar(
+            content: Text(
+              'Error de login: ${e.toString()}',
+              style: AppTextStyles.bodyText.copyWith(color: AppColors.white),
+            ),
+          ),
         );
       }
     }
@@ -73,10 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color.fromRGBO(230, 240, 250, 1),
-              Color.fromRGBO(255, 255, 255, 1),
-            ],
+            colors: [AppColors.primary, AppColors.secondary],
           ),
         ),
         child: Center(
@@ -85,9 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Padding(
               padding: const EdgeInsets.all(24.0),
               child: SingleChildScrollView(
-                // Usamos SingleChildScrollView para evitar overflow
                 child: Form(
-                  // Contenedor del formulario para validación
                   key: _formKey,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -96,7 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       const Icon(
                         Icons.lock_rounded,
                         size: 80,
-                        color: Color.fromRGBO(52, 73, 94, 1),
+                        color: AppColors.accent,
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -104,25 +107,40 @@ class _LoginScreenState extends State<LoginScreen> {
                             ? 'Iniciar Sesión'
                             : 'Confirmar Solicitud',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Color.fromRGBO(52, 73, 94, 1),
+                        style: AppTextStyles.h2.copyWith(
+                          color: AppColors.accent,
                         ),
                       ),
                       const SizedBox(height: 48),
-
-                      // Campo de Correo Electrónico
                       TextFormField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
+                        style: AppTextStyles.bodyText.copyWith(
+                          color: AppColors.white,
+                        ),
                         decoration: InputDecoration(
                           labelText: 'Correo Electrónico',
+                          labelStyle: AppTextStyles.body.copyWith(
+                            color: AppColors.white70,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(15),
                           ),
                           filled: true,
-                          fillColor: Colors.white.withOpacity(0.8),
+                          fillColor: AppColors.secondary,
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                            borderSide: const BorderSide(
+                              color: AppColors.white54,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                            borderSide: const BorderSide(
+                              color: AppColors.accent,
+                              width: 2,
+                            ),
+                          ),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
@@ -132,19 +150,39 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                       ),
                       const SizedBox(height: 16),
-
-                      // Campo de Contraseña
                       TextFormField(
                         controller: _passwordController,
                         obscureText: true,
+                        style: AppTextStyles.bodyText.copyWith(
+                          color: AppColors.white,
+                        ),
                         decoration: InputDecoration(
                           labelText: 'Contraseña',
+                          labelStyle: AppTextStyles.body.copyWith(
+                            color: AppColors.white70,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(15),
                           ),
                           filled: true,
-                          fillColor: Colors.white.withOpacity(0.8),
-                          suffixIcon: const Icon(Icons.visibility),
+                          fillColor: AppColors.secondary,
+                          suffixIcon: const Icon(
+                            Icons.visibility,
+                            color: AppColors.white70,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                            borderSide: const BorderSide(
+                              color: AppColors.white54,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                            borderSide: const BorderSide(
+                              color: AppColors.accent,
+                              width: 2,
+                            ),
+                          ),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
@@ -154,29 +192,24 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                       ),
                       const SizedBox(height: 16),
-
                       if (widget.purpose == 'initial')
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
-                            onPressed: () {
-                              // Lógica para recuperar contraseña
-                            },
-                            child: const Text(
+                            onPressed: () {},
+                            child: Text(
                               '¿Olvidaste tu contraseña?',
-                              style: TextStyle(
-                                color: Color.fromRGBO(52, 152, 219, 1),
+                              style: AppTextStyles.bodyText.copyWith(
+                                color: AppColors.elevatedButton,
                               ),
                             ),
                           ),
                         ),
                       const SizedBox(height: 24),
-
-                      // Botón de Ingreso
                       ElevatedButton(
                         onPressed: _login,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color.fromRGBO(39, 174, 96, 1),
+                          backgroundColor: AppColors.success,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(15),
                           ),
@@ -186,19 +219,19 @@ class _LoginScreenState extends State<LoginScreen> {
                           widget.purpose == 'initial'
                               ? 'Ingresar'
                               : 'Continuar con el Pago',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            color: Colors.white,
-                          ),
+                          style: AppTextStyles.elevatedButton,
                         ),
                       ),
                       const SizedBox(height: 24),
-
-                      // Botón de Registro
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[
-                          const Text("¿No tienes una cuenta? "),
+                          Text(
+                            "¿No tienes una cuenta? ",
+                            style: AppTextStyles.bodyText.copyWith(
+                              color: AppColors.white,
+                            ),
+                          ),
                           TextButton(
                             onPressed: () {
                               Navigator.push(
@@ -208,10 +241,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               );
                             },
-                            child: const Text(
+                            child: Text(
                               'Regístrate aquí',
-                              style: TextStyle(
-                                color: Color.fromRGBO(52, 152, 219, 1),
+                              style: AppTextStyles.bodyText.copyWith(
+                                color: AppColors.elevatedButton,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),

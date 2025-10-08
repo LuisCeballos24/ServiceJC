@@ -25,8 +25,6 @@ class UserApiService extends ApiService {
 
   // NUEVO MÉTODO: Crear una cita (usado por el administrador)
   Future<void> createAppointment(Map<String, dynamic> citaData) async {
-    // Nota: No se requiere token aquí ya que el endpoint /api/citas es público
-    // en tu SecurityConfig (o se asume que el admin ya tiene la autenticación).
     final response = await http.post(
       Uri.parse('$baseUrl/citas'),
       headers: getHeaders(),
@@ -35,6 +33,26 @@ class UserApiService extends ApiService {
 
     if (response.statusCode != 201) {
       throw Exception('Error al crear la cita: ${response.body}');
+    }
+  }
+
+  // NUEVO MÉTODO: Obtener todas las citas para el panel de administración
+  Future<List<AppointmentModel>> fetchAllAppointments() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/citas'),
+        headers: getHeaders(),
+      );
+      if (response.statusCode == 200) {
+        List<dynamic> data = json.decode(response.body);
+        return data.map((item) => AppointmentModel.fromJson(item)).toList();
+      } else {
+        throw Exception(
+          'Error al cargar todas las citas: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      throw Exception('Fallo la conexion con el servidor: $e');
     }
   }
 }

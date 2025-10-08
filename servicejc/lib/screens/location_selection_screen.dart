@@ -4,7 +4,7 @@ import 'package:servicejc/services/location_service.dart';
 import 'package:servicejc/theme/app_colors.dart';
 import 'package:servicejc/theme/app_text_styles.dart';
 import 'package:servicejc/models/product_model.dart';
-import 'package:servicejc/screens/coordinar_cita_screen.dart'; // ¡NUEVA PANTALLA DE DESTINO!
+import 'package:servicejc/screens/coordinar_cita_screen.dart';
 
 class LocationSelectionScreen extends StatefulWidget {
   final Map<ProductModel, int> selectedProducts;
@@ -104,7 +104,6 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
 
   void _onContinue() {
     if (_formKey.currentState!.validate()) {
-      // Asegurarse de que las ubicaciones jerárquicas están seleccionadas
       if (_selectedProvince == null ||
           _selectedDistrict == null ||
           _selectedCorregimiento == null) {
@@ -123,10 +122,8 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
           builder: (context) => CoordinarCitaScreen(
             selectedProducts: widget.selectedProducts,
             totalCost: widget.totalCost,
-            // *** CORRECCIÓN APLICADA AQUÍ ***
             subtotal: widget.subtotal,
             discountAmount: widget.discountAmount,
-            // ******************************
             province: _selectedProvince!,
             district: _selectedDistrict!,
             corregimiento: _selectedCorregimiento!,
@@ -142,7 +139,10 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dirección de Domicilio'),
+        title: Text(
+          'Dirección de Domicilio',
+          style: AppTextStyles.h2.copyWith(color: AppColors.accent),
+        ),
         backgroundColor: AppColors.primary,
         iconTheme: const IconThemeData(color: AppColors.accent),
         titleTextStyle: AppTextStyles.h2.copyWith(color: AppColors.accent),
@@ -152,7 +152,6 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
         child: ListView(
           padding: const EdgeInsets.all(24.0),
           children: <Widget>[
-            // Resumen de la orden
             Card(
               color: AppColors.secondary,
               shape: RoundedRectangleBorder(
@@ -228,8 +227,6 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
               ),
             ),
             const SizedBox(height: 24),
-
-            // Dropdowns de Ubicación
             _buildLocationDropdown(
               label: 'Provincia',
               items: _provinces,
@@ -266,7 +263,10 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: _onContinue,
-              child: const Text('Continuar a Coordinar Cita'),
+              child: Text(
+                'Continuar a Coordinar Cita',
+                style: AppTextStyles.button,
+              ),
             ),
             if (_isLoading)
               const Center(
@@ -297,23 +297,39 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
     required void Function(LocationModel?) onChanged,
     required bool isEnabled,
   }) {
-    // Envuelve el Dropdown en un Container para asegurar las restricciones de ancho.
     return Container(
       child: DropdownButtonFormField<LocationModel>(
         decoration: InputDecoration(
           labelText: label,
+          labelStyle: AppTextStyles.bodyText.copyWith(color: AppColors.white70),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
           filled: true,
-          fillColor: AppColors.white,
+          fillColor: AppColors.secondary,
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: const BorderSide(color: AppColors.white54),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: const BorderSide(color: AppColors.accent, width: 2),
+          ),
         ),
         value: selectedItem,
         items: items
             .map(
-              (item) => DropdownMenuItem(value: item, child: Text(item.name)),
+              (item) => DropdownMenuItem(
+                value: item,
+                child: Text(
+                  item.name,
+                  style: AppTextStyles.bodyText.copyWith(
+                    color: AppColors.white,
+                  ),
+                ),
+              ),
             )
             .toList(),
         onChanged: isEnabled ? onChanged : null,
-        validator: (value) => value == null ? 'Seleccione una opción' : null,
+        validator: (value) => value == null ? 'Este campo es requerido' : null,
       ),
     );
   }
@@ -321,11 +337,21 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
   Widget _buildTextField(TextEditingController controller, String label) {
     return TextFormField(
       controller: controller,
+      style: AppTextStyles.bodyText.copyWith(color: AppColors.white),
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: AppTextStyles.bodyText.copyWith(color: AppColors.white70),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
         filled: true,
-        fillColor: AppColors.white,
+        fillColor: AppColors.secondary,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: const BorderSide(color: AppColors.white54),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: const BorderSide(color: AppColors.accent, width: 2),
+        ),
       ),
       validator: (value) =>
           value == null || value.isEmpty ? 'Este campo es requerido' : null,

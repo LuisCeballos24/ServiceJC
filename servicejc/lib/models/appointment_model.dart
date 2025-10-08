@@ -7,6 +7,8 @@ class AppointmentModel {
   final String clienteId;
   final String? tecnicoId;
   final String status;
+  final String? descripcion; // <--- Se agregó este campo
+  final double? costoTotal; // <--- Se agregó este campo
 
   AppointmentModel({
     required this.id,
@@ -15,20 +17,23 @@ class AppointmentModel {
     required this.clienteId,
     this.tecnicoId,
     required this.status,
+    this.descripcion, // <--- Se agregó este campo
+    this.costoTotal, // <--- Se agregó este campo
   });
 
   factory AppointmentModel.fromJson(Map<String, dynamic> json) {
     return AppointmentModel(
-      id: json['id'] as String,
-      fechaHora: json['fechaHora'] as String,
-      servicioId: json['servicioId'] as String,
-      clienteId: json['clienteId'] as String,
+      id: json['id'] as String? ?? '',
+      fechaHora: json['fechaHora'] as String? ?? '',
+      servicioId: json['servicioId'] as String? ?? '',
+      clienteId: json['clienteId'] as String? ?? '',
       tecnicoId: json['tecnicoId'] as String?,
-      status: json['status'] as String,
+      status: json['status'] as String? ?? '',
+      descripcion: json['descripcion'] as String?,
+      costoTotal: (json['costoTotal'] as num?)?.toDouble(),
     );
   }
 
-  // <--- AÑADIR ESTE MÉTODO
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -37,6 +42,8 @@ class AppointmentModel {
       'clienteId': clienteId,
       'tecnicoId': tecnicoId,
       'status': status,
+      'descripcion': descripcion,
+      'costoTotal': costoTotal,
     };
   }
 }

@@ -14,22 +14,25 @@ class PromoCarousel extends StatelessWidget {
   Widget build(BuildContext context) {
     return CarouselSlider(
       options: CarouselOptions(
-        autoPlay: true,
+        autoPlay: false, // Se ha deshabilitado la reproducción automática
         enlargeCenterPage: true,
         aspectRatio: 2.0,
         enableInfiniteScroll: true,
-        autoPlayInterval: const Duration(seconds: 5),
       ),
-      items: imgList.map((item) => Container(
-        margin: const EdgeInsets.symmetric(horizontal: 5.0),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16.0),
-          image: DecorationImage(
-            image: NetworkImage(item),
-            fit: BoxFit.cover,
-          ),
-        ),
-      )).toList(),
+      items: imgList
+          .map(
+            (item) => Container(
+              margin: const EdgeInsets.symmetric(horizontal: 5.0),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16.0),
+                image: DecorationImage(
+                  image: NetworkImage(item),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          )
+          .toList(),
     );
   }
 }
