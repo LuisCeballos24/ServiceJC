@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../models/tecnico.dart';
+import 'package:servicejc/models/cita_model.dart';
 import 'package:servicejc/models/user_model.dart';
 import 'api_service.dart'; // Asegúrate de que este import sea correcto
 
@@ -26,6 +26,47 @@ class AdminApiService extends ApiService {
 
     if (response.statusCode != 204) {
       throw Exception('Error al eliminar el técnico');
+    }
+  }
+
+  Future<List<UserModel>> fetchTechnicians() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/citas/tecnicos'),
+      headers: getHeaders(),
+    );
+
+    if (response.statusCode == 200) {
+      Iterable data = json.decode(response.body);
+      // Mapear la respuesta del backend a List<UserModel>
+      return List<UserModel>.from(
+        data.map((model) => UserModel.fromJson(model)),
+      );
+    } else {
+      throw Exception(
+        'Error al obtener la lista de técnicos: ${response.body}',
+      );
+    }
+  }
+
+  /// Actualiza una cita (incluyendo status y tecnicoId).
+  /// Endpoint: PUT /api/citas/{id} (asumiendo que está implementado en el backend)
+  Future<CitaModel> updateCita(CitaModel cita) async {
+    // Usamos el método toJson() de CitaModel que combina 'fecha' y 'hora'
+    // en 'fechaHora' y mapea 'status' a 'estado' para el backend Java.
+    final citaJson = cita.toJson();
+
+    final response = await http.put(
+      Uri.parse('$baseUrl/api/citas/${cita.id}'),
+      headers: getHeaders(),
+      body: jsonEncode(citaJson),
+    );
+
+    if (response.statusCode == 200) {
+      return CitaModel.fromJson(json.decode(response.body));
+    } else {
+      throw Exception(
+        'Error al actualizar la cita: ${response.statusCode} - ${response.body}',
+      );
     }
   }
 

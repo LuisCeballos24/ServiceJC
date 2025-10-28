@@ -61,4 +61,28 @@ public class CitaService {
         }
         return listaCitas;
     }
+
+    // MÉTODO: Lógica para actualizar una Cita
+    public Cita updateCita(String id, Cita citaDetails) throws ExecutionException, InterruptedException {
+        DocumentReference docRef = firestore.collection(COLLECTION_NAME).document(id);
+        
+        DocumentSnapshot snapshot = docRef.get().get();
+        if (!snapshot.exists()) {
+            throw new RuntimeException("Cita no encontrada con ID: " + id);
+        }
+
+        // Aplicar las actualizaciones. 
+        // Usamos los campos existentes: tecnicoId, estado, serviciosSeleccionados, fechaHora, etc.
+        docRef.update(
+            "estado", citaDetails.getEstado(),
+            "tecnicoId", citaDetails.getTecnicoId(), // Usando el campo 'tecnicoId' existente
+            "serviciosSeleccionados", citaDetails.getServiciosSeleccionados(),
+            "fechaHora", citaDetails.getFechaHora(), // Esto actualiza la fecha/hora completa
+            "descripcion", citaDetails.getDescripcion(),
+            "costoTotal", citaDetails.getCostoTotal()
+        ).get();
+        
+        DocumentSnapshot updatedSnapshot = docRef.get().get();
+        return updatedSnapshot.toObject(Cita.class);
+    }
 }

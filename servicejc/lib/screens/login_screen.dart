@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:servicejc/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:servicejc/screens/register_screen.dart';
+
+import 'package:servicejc/screens/admin_dashboard_screen.dart'; // (Ruta de Administrador)
+import 'package:servicejc/screens/technician_panel_screen.dart'; // (Ruta de Técnico)
+import 'package:servicejc/screens/welcome_client_screen.dart'; // (Ruta por defecto para el Cliente)
+
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 
@@ -31,41 +36,60 @@ class _LoginScreenState extends State<LoginScreen> {
       try {
         final String email = _emailController.text;
         final String password = _passwordController.text;
-        final response = await _authService.loginUser(email, password);
+        final response = await _authService.loginUser(email, password); //
 
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('authToken', response.token);
+        final prefs = await SharedPreferences.getInstance(); //
+        await prefs.setString('authToken', response.token); //
 
-        if (response.rol != null) {
-          await prefs.setString('userRole', response.rol!);
+        // 1. Obtener el rol del usuario
+        final userRole = response.rol; //
+
+        if (userRole != null) {
+          await prefs.setString('userRole', userRole); //
         } else {
-          await prefs.remove('userRole');
+          await prefs.remove('userRole'); //
         }
 
         if (response.userId != null) {
-          await prefs.setString('userId', response.userId!);
+          await prefs.setString('userId', response.userId!); //
         } else {
-          await prefs.remove('userId');
+          await prefs.remove('userId'); //
         }
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               'Login exitoso. Bienvenido de nuevo.',
-              style: AppTextStyles.bodyText.copyWith(color: AppColors.white),
+              style: AppTextStyles.bodyText.copyWith(color: AppColors.white), //
             ),
           ),
         );
+        // 2. Definir la pantalla de destino según el rol
+        Widget nextScreen;
+        if (userRole == 'ADMINISTRATIVO') {
+          //
+          // Redirigir al panel de administración
+          nextScreen = AdminDashboardScreen(); //
+        } else if (userRole == 'TECNICO') {
+          //
+          // Redirigir al panel del técnico
+          nextScreen = const TechnicianPanelScreen(); //
+        } else {
+          // Por defecto (USUARIO_FINAL) al home principal
+          nextScreen = const WelcomeClientScreen(); //
+        }
 
-        Navigator.of(
-          context,
-        ).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
+        // 3. Navegación definitiva, reemplazando todas las rutas anteriores
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => nextScreen),
+          (Route<dynamic> route) => false,
+        );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               'Error de login: ${e.toString()}',
-              style: AppTextStyles.bodyText.copyWith(color: AppColors.white),
+              style: AppTextStyles.bodyText.copyWith(color: AppColors.white), //
             ),
           ),
         );
