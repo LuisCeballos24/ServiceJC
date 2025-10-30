@@ -21,9 +21,11 @@ public class CitaController {
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ADMINISTRATIVO', 'TECNICO')")
-    public ResponseEntity<List<Cita>> getAllCitas() {
+    // MODIFICADO: Cambiar tipo de retorno
+    public ResponseEntity<List<Cita>> getAllCitas() { 
         try {
-            List<Cita> citas = citaService.getAllCitas();
+            // Llama al servicio, que ahora devuelve DTOs
+            List<Cita> citas = citaService.getAllCitas(); 
             return ResponseEntity.ok(citas);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
@@ -48,6 +50,25 @@ public class CitaController {
         } catch (Exception e) {
             // Maneja cualquier error que ocurra al obtener las citas
             return new ResponseEntity<>("Error al obtener las citas: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMINISTRATIVO')") // Solo administradores pueden actualizar citas
+    public ResponseEntity<Cita> updateCita(@PathVariable String id, @RequestBody Cita citaDetails) {
+        try {
+            // Llama al método de servicio que maneja la lógica de actualización
+            Cita updatedCita = citaService.updateCita(id, citaDetails); 
+            return ResponseEntity.ok(updatedCita);
+        } catch (RuntimeException e) {
+             // Manejar si la cita no fue encontrada, asumiendo que el servicio lanza una RuntimeException
+            if (e.getMessage().contains("Cita no encontrada")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            }
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        } catch (Exception e) {
+             // Manejar ExecutionException, InterruptedException y otros errores
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 }

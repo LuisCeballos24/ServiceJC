@@ -14,6 +14,7 @@ public class Cita {
     private String estado;
     private double costoTotal;
     private String descripcion; // Campo agregado
+    private List<Producto> productosSeleccionados;
 
     // Constructor vacío requerido por Firestore
     public Cita() {}
@@ -35,6 +36,14 @@ public class Cita {
         return id;
     }
 
+    public List<Producto> getProductosSeleccionados() {
+        return productosSeleccionados;
+    }
+
+    public void setProductosSeleccionados(List<Producto> productosSeleccionados) {
+        this.productosSeleccionados = productosSeleccionados;
+    }
+    
     public void setId(String id) {
         this.id = id;
     }

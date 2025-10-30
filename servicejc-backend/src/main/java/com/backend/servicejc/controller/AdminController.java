@@ -41,6 +41,18 @@ public class AdminController {
         Map<String, Object> metrics = dashboardService.getMetrics();
         return ResponseEntity.ok(metrics);
     }
+
+    @GetMapping("/tecnicos")
+    @PreAuthorize("hasAuthority('ADMINISTRATIVO')")
+    public ResponseEntity<List<Usuario>> getAllTechnicians() throws ExecutionException, InterruptedException {
+    try {
+        // CORRECCIÓN: Llama al nuevo método obtenerTecnicos()
+        List<Usuario> tecnicos = tecnicoService.obtenerTecnicos(); 
+        return ResponseEntity.ok(tecnicos);
+    } catch (Exception e) {
+        return ResponseEntity.internalServerError().body(null);
+    }
+    }
     
     @DeleteMapping("/tecnicos/{tecnicoId}")
     @PreAuthorize("hasAuthority('ADMINISTRATIVO')")

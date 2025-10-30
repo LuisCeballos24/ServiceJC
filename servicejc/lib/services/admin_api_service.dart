@@ -31,7 +31,7 @@ class AdminApiService extends ApiService {
 
   Future<List<UserModel>> fetchTechnicians() async {
     final response = await http.get(
-      Uri.parse('$baseUrl/api/citas/tecnicos'),
+      Uri.parse('$baseUrl/admin/tecnicos'),
       headers: getHeaders(),
     );
 
@@ -56,7 +56,7 @@ class AdminApiService extends ApiService {
     final citaJson = cita.toJson();
 
     final response = await http.put(
-      Uri.parse('$baseUrl/api/citas/${cita.id}'),
+      Uri.parse('$baseUrl/citas/${cita.id}'),
       headers: getHeaders(),
       body: jsonEncode(citaJson),
     );

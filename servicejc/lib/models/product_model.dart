@@ -1,4 +1,4 @@
-// En lib/models/producto_model.dart
+// En lib/models/product_model.dart
 
 class ProductModel {
   final String id;
@@ -17,10 +17,11 @@ class ProductModel {
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
     return ProductModel(
-      id: json['id'],
-      nombre: json['nombre'],
-      costo: (json['costo'] as num?)?.toDouble() ?? 0.0, // Manejo seguro de valores nulos
-      servicioId: json['servicioId'],
+      // FIX CLAVE: Asegurar Null Safety para todos los campos requeridos
+      id: (json['id'] as String?) ?? 'unknown_prod_id',
+      nombre: (json['nombre'] as String?) ?? 'Nombre Desconocido',
+      costo: (json['costo'] as num?)?.toDouble() ?? 0.0,
+      servicioId: (json['servicioId'] as String?) ?? 'unknown_service_id',
     );
   }
 }

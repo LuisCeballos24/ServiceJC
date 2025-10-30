@@ -29,6 +29,7 @@ class _CitasScreenState extends State<CitasScreen> {
     'TODAS',
     'PENDIENTE',
     'ASIGNADA',
+    'CONFIRMADA',
     'EN PROGRESO',
     'COMPLETADA',
     'CANCELADA',
@@ -40,13 +41,12 @@ class _CitasScreenState extends State<CitasScreen> {
     _loadData();
   }
 
-  // Carga todas las citas y la lista de técnicos
   Future<void> _loadData() async {
     setState(() {
       _isLoading = true;
     });
     try {
-      final citas = await _appointmentService.fetchServices();
+      final citas = await _appointmentService.fetchCitas();
       final tecnicos = await _adminApiService.fetchTechnicians();
 
       setState(() {
@@ -73,33 +73,28 @@ class _CitasScreenState extends State<CitasScreen> {
     }
   }
 
-  // Lógica de Filtrado por Estado y Técnico
   void _applyFilter() {
     setState(() {
       _citasFiltradas = _citas.where((cita) {
-        // Filtro por Estado (usa cita.status de Dart)
         final matchEstado =
             _estadoSeleccionado == 'TODAS' ||
-            cita.status.toUpperCase() == _estadoSeleccionado.toUpperCase();
+            cita.status == _estadoSeleccionado;
 
-        // Filtro por Técnico (usa cita.tecnicoId)
         final matchTecnico = _tecnicoSeleccionadoId == 'TODOS'
-            ? true // Si es 'TODOS', se incluye
+            ? true
             : cita.tecnicoId == _tecnicoSeleccionadoId;
         return matchEstado && matchTecnico;
       }).toList();
     });
   }
 
-  // Diálogo para Editar y Asignar Cita (Edición Compacta y Funcional)
   void _showEditCitaDialog(CitaModel cita) {
-    String? nuevoEstado = cita.status;
+    String? nuevoEstado = cita.status.toUpperCase();
     String? nuevoTecnicoId = cita.tecnicoId;
 
-    // Concatenamos los nombres de los productos/servicios para la vista
     final servicesStr =
-        cita.productos?.keys.map((p) => p.nombre).join(', ') ??
-        'Servicios no listados';
+        cita.productosSeleccionados?.map((p) => p.nombre).join(', ') ??
+        'Servicios no listados: ${cita.descripcion}';
 
     showDialog(
       context: context,
@@ -135,12 +130,15 @@ class _CitasScreenState extends State<CitasScreen> {
                       decoration: const InputDecoration(
                         labelText: 'Estado Actual',
                       ),
-                      items: _estadosDisponibles.skip(1).map((String estado) {
-                        return DropdownMenuItem<String>(
-                          value: estado,
-                          child: Text(estado),
-                        );
-                      }).toList(),
+                      items: _estadosDisponibles
+                          .where((estado) => estado != 'TODAS')
+                          .map((String estado) {
+                            return DropdownMenuItem<String>(
+                              value: estado,
+                              child: Text(estado),
+                            );
+                          })
+                          .toList(),
                       onChanged: (String? newValue) {
                         setStateInterno(() {
                           nuevoEstado = newValue;
@@ -185,17 +183,21 @@ class _CitasScreenState extends State<CitasScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
-                // Creamos una nueva instancia de CitaModel con los cambios
+                // SOLUCIÓN: Crear el objeto completo con TODOS los campos originales
+                // y solo modificar estado y técnico
                 final CitaModel updatedCita = CitaModel(
                   id: cita.id,
                   userId: cita.userId,
-                  tecnicoId: nuevoTecnicoId, // Actualizado
-                  status: nuevoEstado!, // Actualizado
-                  // Mantenemos los campos originales (crucial para el Backend)
+                  tecnicoId: nuevoTecnicoId,
+                  status: nuevoEstado!,
                   fecha: cita.fecha,
                   hora: cita.hora,
                   costoTotal: cita.costoTotal,
                   descripcion: cita.descripcion,
+                  // INCLUIR solo los IDs (serviciosSeleccionados)
+                  serviciosSeleccionados: cita.serviciosSeleccionados,
+                  // CRÍTICO: Incluir productosSeleccionados si existe
+                  productosSeleccionados: cita.productosSeleccionados,
                 );
 
                 try {
@@ -247,7 +249,6 @@ class _CitasScreenState extends State<CitasScreen> {
       ),
       body: Column(
         children: [
-          // 1. Sección de Filtros (Compacta y funcional)
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Row(
@@ -314,7 +315,6 @@ class _CitasScreenState extends State<CitasScreen> {
 
           const Divider(),
 
-          // 2. Listado Compacto de Citas
           Expanded(
             child: _isLoading
                 ? const Center(
@@ -334,18 +334,16 @@ class _CitasScreenState extends State<CitasScreen> {
                     itemBuilder: (context, index) {
                       final cita = _citasFiltradas[index];
 
-                      // Buscamos el nombre del técnico
                       final tecnico = _tecnicos.firstWhereOrNull(
                         (t) => t.id == cita.tecnicoId,
                       );
                       final tecnicoNombre = tecnico?.nombre ?? 'Sin Asignar';
 
-                      // Concatenamos los nombres de los productos/servicios
                       final servicesStr =
-                          cita.productos?.keys
-                              .map((p) => p.nombre)
+                          cita.productosSeleccionados
+                              ?.map((p) => p.nombre)
                               .join(', ') ??
-                          'Servicio(s) Desconocido(s)';
+                          'Servicios no listados: ${cita.descripcion}';
 
                       return Card(
                         color: AppColors.secondary,
@@ -403,7 +401,6 @@ class _CitasScreenState extends State<CitasScreen> {
   }
 }
 
-// Extensión de ayuda para buscar en listas (Necesaria para firstWhereOrNull)
 extension ListExt<T> on List<T> {
   T? firstWhereOrNull(bool Function(T element) test) {
     for (var element in this) {

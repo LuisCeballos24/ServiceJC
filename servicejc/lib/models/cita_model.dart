@@ -11,9 +11,11 @@ class CitaModel {
   final String hora;
   final String status;
   final double costoTotal;
-  final String descripcion;
+  final String descripcion; // Sigue siendo requerido en el constructor
   final UserModel? cliente;
   final Map<ProductModel, int>? productos;
+  final List<String>? serviciosSeleccionados;
+  final List<ProductModel>? productosSeleccionados; // <--- NUEVO CAMPO LISTA
 
   CitaModel({
     required this.id,
@@ -26,21 +28,64 @@ class CitaModel {
     required this.descripcion,
     this.cliente,
     this.productos,
+    this.productosSeleccionados,
+    this.serviciosSeleccionados, // Añadir a constructor
   });
 
   factory CitaModel.fromJson(Map<String, dynamic> json) {
+    // 1. Manejo seguro para String (incluye corrección de claves)
+    final String safeId = (json['id'] as String?) ?? 'unknown_id';
+    // Backend usa 'usuarioId', Dart usa 'userId'
+    final String safeUserId = (json['usuarioId'] as String?) ?? 'unknown_user';
+    // Backend usa 'estado', Dart usa 'status'
+    final String safeStatus = ((json['estado'] as String?) ?? 'PENDIENTE')
+        .toUpperCase();
+    // FIX CLAVE: Si la descripción es null (como en tu backend), usa ''
+    final String safeDescripcion = (json['descripcion'] as String?) ?? '';
+
+    final List<ProductModel> safeProductosSeleccionados =
+        (json['productosSeleccionados'] as List<dynamic>?)
+            ?.map((item) => ProductModel.fromJson(item as Map<String, dynamic>))
+            .toList() ??
+        [];
+    // 2. Parseo seguro para double: usa el valor o 0.0
+    // 2. Manejo seguro para double
+    final double safeCostoTotal =
+        (json['costoTotal'] as num?)?.toDouble() ?? 0.0;
+
+    // 3. Parseo seguro para DateTime
+    // 3. FIX CLAVE: Manejo de fechaHora (tu backend no envía 'fecha' y 'hora' separadas)
+    DateTime safeFecha = DateTime.now();
+    String safeHora = '00:00';
+
+    try {
+      final fechaHoraStr = json['fechaHora'] as String?;
+      if (fechaHoraStr != null) {
+        safeFecha = DateTime.parse(fechaHoraStr);
+        // Extraer solo la hora (HH:mm) del objeto DateTime
+        safeHora = DateFormat('HH:mm').format(safeFecha);
+      }
+    } catch (_) {
+      // Fallback si el string es inválido, mantiene los valores por defecto
+      print('Warning: Failed to parse fechaHora. Using current time.');
+    }
+
     return CitaModel(
-      id: json['id'],
-      userId: json['userId'],
-      tecnicoId: json['tecnicoId'],
-      fecha: DateTime.parse(json['fecha']),
-      hora: json['hora'],
-      status: json['status'],
-      costoTotal: json['costoTotal'],
-      descripcion: json['descripcion'],
+      id: safeId,
+      userId: safeUserId,
+      tecnicoId: json['tecnicoId'] as String?, // Nullable, no necesita ??
+      fecha: safeFecha,
+      hora: safeHora,
+      status: safeStatus,
+      costoTotal: safeCostoTotal,
+      descripcion: safeDescripcion,
+      productosSeleccionados:
+          safeProductosSeleccionados, // Asignar la lista enriquecida // Usar el valor seguro
       // ... (lógica para parsear cliente, productos, etc.)
     );
   }
+
+  // El método toJson() se mantiene igual
   Map<String, dynamic> toJson() {
     // 1. Combinar fecha y hora en formato ISO 8601 para que Java (Date) lo entienda:
     // Formato requerido: "yyyy-MM-ddTHH:mm:ss.sss" (Ej: 2025-10-24T10:00:00.000)
@@ -50,16 +95,14 @@ class CitaModel {
 
     return {
       'id': id,
-      'usuarioId': userId, // Usamos 'usuarioId' que es el campo en Java
+      'usuarioId': userId,
       'tecnicoId': tecnicoId,
-      'estado': status, // Mapeo de 'status' (Dart) a 'estado' (Java/JSON)
-
-      'fechaHora': fechaHoraStr, // Fecha y hora combinadas
-      // Campos que deben enviarse para evitar que el backend los borre o de error:
+      'estado': status,
+      'fechaHora': fecha.toIso8601String(),
       'costoTotal': costoTotal,
       'descripcion': descripcion,
-      // Si el modelo Java Cita tiene 'productos', estos deben serializarse aquí.
-      // Si 'productos' no se está modificando, confiamos en que el backend lo mantendrá.
+      'serviciosSeleccionados': serviciosSeleccionados, // Solo IDs
+      // NO incluir productosSeleccionados en toJson()
     };
   }
 }

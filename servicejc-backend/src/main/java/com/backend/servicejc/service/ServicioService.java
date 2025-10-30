@@ -6,10 +6,12 @@ import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
+import com.google.cloud.firestore.DocumentSnapshot; // Importación necesaria
 import com.google.cloud.firestore.QuerySnapshot;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.ArrayList;
+import com.google.cloud.firestore.FieldPath;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -43,6 +45,27 @@ public class ServicioService {
         return documents.stream()
                 .map(doc -> doc.toObject(Producto.class))
                 .collect(Collectors.toList());
+    }
+
+   public List<Producto> getProductosByIds(List<String> productoIds) throws ExecutionException, InterruptedException {
+    if (productoIds == null || productoIds.isEmpty()) {
+        return new ArrayList<>();
+    }
+
+    // Usar whereIn para obtener todos los documentos con una sola llamada
+    QuerySnapshot querySnapshot = firestore.collection("productos")
+            .whereIn(FieldPath.documentId(), productoIds) // Importar FieldPath
+            .get()
+            .get();
+
+    return querySnapshot.getDocuments().stream()
+            .map(doc -> {
+                Producto p = doc.toObject(Producto.class);
+                if (p != null) p.setId(doc.getId());
+                return p;
+            })
+            .filter(p -> p != null)
+            .collect(Collectors.toList());
     }
 
     // Método de poblamiento mejorado con la fusión de todos los datos del Excel

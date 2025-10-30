@@ -1,6 +1,7 @@
 package com.backend.servicejc.service;
 
 import com.backend.servicejc.model.Cita;
+import com.backend.servicejc.model.Producto;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.CollectionReference;
 import com.google.cloud.firestore.DocumentReference;
@@ -19,11 +20,14 @@ import java.util.concurrent.ExecutionException;
 public class CitaService {
 
     private final Firestore firestore;
+    private final ServicioService servicioService; // Inyectar ServicioService
     private final String COLLECTION_NAME = "citas";
 
     @Autowired
-    public CitaService(Firestore firestore) {
+    // Añadir inyección de ServicioService
+    public CitaService(Firestore firestore, ServicioService servicioService) { 
         this.firestore = firestore;
+        this.servicioService = servicioService; 
     }
 
     // Método para crear una nueva cita
@@ -48,20 +52,38 @@ public class CitaService {
         return citas;
     }
 
-    // Método para obtener todas las citas
-    public List<Cita> getAllCitas() throws Exception {
-        CollectionReference citas = firestore.collection(COLLECTION_NAME);
-        QuerySnapshot querySnapshot = citas.get().get();
-        List<Cita> listaCitas = new ArrayList<>();
+    // MÉTODO MODIFICADO: Ahora devuelve DTOs enriquecidos
+   public List<Cita> getAllCitas() throws Exception {
+    CollectionReference citas = firestore.collection(COLLECTION_NAME);
+    QuerySnapshot querySnapshot = citas.get().get();
+    List<Cita> listaCitasEnriquecidas = new ArrayList<>(); 
 
-        if (!querySnapshot.isEmpty()) {
-            for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
-                listaCitas.add(doc.toObject(Cita.class));
-            }
+    if (!querySnapshot.isEmpty()) {
+        for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+            Cita cita = doc.toObject(Cita.class);
+            
+            // DEBUG: Verificar los IDs
+            System.out.println("IDs de servicios: " + cita.getServiciosSeleccionados());
+            
+            // 1. Obtener los productos
+            List<Producto> productos = servicioService.getProductosByIds(cita.getServiciosSeleccionados());
+            
+            // DEBUG: Verificar los productos obtenidos
+            System.out.println("Productos obtenidos: " + productos.size());
+            productos.forEach(p -> System.out.println("  - " + p.getId() + ": " + p.getNombre()));
+
+            // 2. ENRIQUECER
+            cita.setProductosSeleccionados(productos);
+            
+            // DEBUG: Verificar que se asignaron
+            System.out.println("Productos en cita: " + cita.getProductosSeleccionados().size());
+
+            listaCitasEnriquecidas.add(cita); 
         }
-        return listaCitas;
     }
-
+    return listaCitasEnriquecidas; 
+    }
+    
     // MÉTODO: Lógica para actualizar una Cita
     public Cita updateCita(String id, Cita citaDetails) throws ExecutionException, InterruptedException {
         DocumentReference docRef = firestore.collection(COLLECTION_NAME).document(id);
