@@ -209,7 +209,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           borderSide: const BorderSide(color: AppColors.accent, width: 2),
         ),
       ),
-      value: selectedValue,
+      initialValue: selectedValue,
       isExpanded: true,
       items: items.map<DropdownMenuItem<T>>((T value) {
         return DropdownMenuItem<T>(
@@ -311,7 +311,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           _isTechnicianApplicant = value;
                         });
                       },
-                      activeColor: AppColors.success,
+                      activeThumbColor: AppColors.success,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(15),
                       ),

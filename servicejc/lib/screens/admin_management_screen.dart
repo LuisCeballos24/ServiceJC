@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart' show DateFormat;
 import 'package:servicejc/models/appointment_model.dart';
 import 'package:servicejc/models/user_model.dart';
 import 'package:servicejc/models/user_address_model.dart';
@@ -81,7 +82,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen>
 }
 
 class _BuildCreateUserTab extends StatefulWidget {
-  const _BuildCreateUserTab({Key? key}) : super(key: key);
+  const _BuildCreateUserTab({super.key});
   @override
   __BuildCreateUserTabState createState() => __BuildCreateUserTabState();
 }
@@ -104,7 +105,7 @@ class __BuildCreateUserTabState extends State<_BuildCreateUserTab> {
   LocationModel? _selectedDistrict;
   LocationModel? _selectedCorregimiento;
 
-  String _selectedRole = 'USUARIO_FINAL';
+  String _selectedRole = 'USUARIO_FINAL'; // Rol por defecto
   final AuthService _authService = AuthService();
 
   @override
@@ -174,6 +175,7 @@ class __BuildCreateUserTabState extends State<_BuildCreateUserTab> {
       }
 
       try {
+        // 1. Construir el modelo de dirección
         final userAddress = UserAddressModel(
           province: _selectedProvince!.name,
           district: _selectedDistrict!.name,
@@ -182,22 +184,41 @@ class __BuildCreateUserTabState extends State<_BuildCreateUserTab> {
           house: _casaController.text,
         );
 
+        // 2. Construir el modelo de usuario con el rol seleccionado
         final user = UserModel(
-          id: _emailController.text,
+          id: '',
           nombre: _nameController.text,
           correo: _emailController.text,
           contrasena: _passwordController.text,
           telefono: _phoneController.text,
-          rol: _selectedRole,
           direccion: userAddress,
+          rol: _selectedRole,
         );
 
+        // 3. Llamar al servicio de registro
         String message = await _authService.registerUser(user);
 
+        // 4. Éxito: Mensaje y reseteo de formulario
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message), backgroundColor: AppColors.success),
         );
+
+        // Resetear todos los campos y estados
         _formKey.currentState!.reset();
+        _nameController.clear();
+        _emailController.clear();
+        _passwordController.clear();
+        _phoneController.clear();
+        _barrioController.clear();
+        _casaController.clear();
+        setState(() {
+          _selectedProvince = null;
+          _selectedDistrict = null;
+          _selectedCorregimiento = null;
+          _districts = [];
+          _corregimientos = [];
+          _selectedRole = 'USUARIO_FINAL'; // Devolver al rol por defecto
+        });
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -237,10 +258,12 @@ class __BuildCreateUserTabState extends State<_BuildCreateUserTab> {
       ),
       validator: (v) {
         if (v!.isEmpty) return 'Campo requerido';
-        if (label.contains('Correo') && !v.contains('@'))
+        if (label.contains('Correo') && !v.contains('@')) {
           return 'Correo inválido';
-        if (label.contains('Contraseña') && v.length < 6)
+        }
+        if (label.contains('Contraseña') && v.length < 6) {
           return 'Mínimo 6 caracteres';
+        }
         return null;
       },
     );
@@ -253,7 +276,7 @@ class __BuildCreateUserTabState extends State<_BuildCreateUserTab> {
     void Function(LocationModel?) onChanged,
   ) {
     return DropdownButtonFormField<LocationModel>(
-      value: selectedValue,
+      initialValue: selectedValue,
       dropdownColor: AppColors.secondary,
       style: AppTextStyles.bodyText.copyWith(color: AppColors.white),
       decoration: InputDecoration(
@@ -306,7 +329,7 @@ class __BuildCreateUserTabState extends State<_BuildCreateUserTab> {
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButtonFormField<String>(
-                  value: _selectedRole,
+                  initialValue: _selectedRole,
                   dropdownColor: AppColors.secondary,
                   style: AppTextStyles.bodyText.copyWith(
                     color: AppColors.white,
@@ -419,7 +442,7 @@ class __BuildCreateUserTabState extends State<_BuildCreateUserTab> {
 }
 
 class _BuildCreateAppointmentTab extends StatefulWidget {
-  const _BuildCreateAppointmentTab({Key? key}) : super(key: key);
+  const _BuildCreateAppointmentTab({super.key});
 
   @override
   __BuildCreateAppointmentTabState createState() =>
@@ -534,8 +557,10 @@ class __BuildCreateAppointmentTabState
   }
 
   String _formatDateTime() {
-    if (_selectedDate == null || _selectedTime == null)
+    if (_selectedDate == null || _selectedTime == null) {
       return 'Seleccionar Fecha y Hora';
+    }
+    // FIX DE HORA: Usar formato 12 horas con AM/PM
     final DateTime fullDate = DateTime(
       _selectedDate!.year,
       _selectedDate!.month,
@@ -543,7 +568,8 @@ class __BuildCreateAppointmentTabState
       _selectedTime!.hour,
       _selectedTime!.minute,
     );
-    return 'Fecha: ${fullDate.day}/${fullDate.month}/${fullDate.year} Hora: ${_selectedTime!.format(context)}';
+    // Retornar solo la fecha, la hora se formatea dentro del widget
+    return DateFormat('dd/MM/yyyy h:mm a').format(fullDate);
   }
 
   void _createAppointment() async {
@@ -560,12 +586,17 @@ class __BuildCreateAppointmentTabState
         _selectedTime!.minute,
       );
 
+      // FIX DE HORA: Formatear la hora a HH:mm
+      final String formattedTime =
+          '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}';
+
       try {
         final appointment = AppointmentModel(
           id: '',
           clienteId: _selectedClientId!,
           tecnicoId: 'admin_scheduled',
           servicioId: _selectedService!.id,
+          // CLAVE: Enviar el DateTime completo, que incluye la hora y será parseado por Java.
           fechaHora: appointmentDateTime.toIso8601String(),
           status: 'confirmada',
         );
@@ -573,7 +604,8 @@ class __BuildCreateAppointmentTabState
         final Map<String, dynamic> citaData = {
           'usuarioId': _selectedClientId,
           'serviciosSeleccionados': [_selectedProduct!.id],
-          'fechaHora': appointmentDateTime.toIso8601String(),
+          'fechaHora': appointmentDateTime
+              .toIso8601String(), // Correcto para Java
           'estado': 'confirmada',
           'costoTotal': _costoTotal,
           'descripcion': _descriptionController.text,
@@ -797,7 +829,7 @@ class __BuildCreateAppointmentTabState
     bool isEnabled = true,
   }) {
     return DropdownButtonFormField<T>(
-      value: selectedValue,
+      initialValue: selectedValue,
       dropdownColor: AppColors.secondary,
       style: AppTextStyles.bodyText.copyWith(color: AppColors.white),
       decoration: _getAdminInputDecoration(label),

@@ -12,9 +12,13 @@ import org.springframework.stereotype.Service;
 
 import com.google.cloud.firestore.QuerySnapshot;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
+import com.google.cloud.firestore.DocumentSnapshot; // Necesario para obtener el estado actual
+// ...
 
 import java.util.Date;
 import java.util.List;
+import java.util.HashMap; // <--- NUEVA IMPORTACIÓN
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
@@ -64,5 +68,44 @@ public class TecnicoService {
         
         // Actualiza los campos de fecha, hora y el técnico asignado
         citaRef.update("fechaHora", nuevaFechaHora, "tecnicoId", nuevoTecnicoId).get();
+    }
+
+    public Usuario updateTecnico(Usuario tecnicoDetails) throws ExecutionException, InterruptedException {
+        // Asumimos que tecnicoDetails.getId() contiene el DocumentId del usuario en Firestore.
+        DocumentReference docRef = firestore.collection(USUARIOS_COLLECTION).document(tecnicoDetails.getId());
+        
+        DocumentSnapshot snapshot = docRef.get().get();
+        if (!snapshot.exists()) {
+            throw new RuntimeException("Técnico no encontrado con ID: " + tecnicoDetails.getId());
+        }
+
+        // 1. Construir mapa de actualizaciones (solo incluye campos no nulos)
+        Map<String, Object> updates = new HashMap<>();
+        
+        if (tecnicoDetails.getNombre() != null) {
+            updates.put("nombre", tecnicoDetails.getNombre());
+        }
+
+        if (tecnicoDetails.getCorreo() != null) {
+            updates.put("correo", tecnicoDetails.getCorreo());
+        }
+        
+        // 2. Manejar la Contraseña (solo se actualiza si se envía una nueva)
+        if (tecnicoDetails.getContrasena() != null && !tecnicoDetails.getContrasena().isEmpty()) {
+            String encodedPassword = passwordEncoder.encode(tecnicoDetails.getContrasena());
+            updates.put("contrasena", encodedPassword);
+        }
+
+        // 3. Aplicar actualizaciones
+        if (!updates.isEmpty()) {
+            docRef.update(updates).get();
+        } else {
+            // Si no hay campos para actualizar, devuelve el objeto actual
+            return snapshot.toObject(Usuario.class);
+        }
+
+        // 4. Devolver el objeto Usuario actualizado y enriquecido
+        DocumentSnapshot updatedSnapshot = docRef.get().get();
+        return updatedSnapshot.toObject(Usuario.class);
     }
 }

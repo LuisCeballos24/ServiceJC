@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Date;
 import java.util.List; // Importación necesaria
 import java.util.Map;
+import org.springframework.http.HttpStatus;
+import java.util.HashMap;
 import java.util.concurrent.ExecutionException;
 
 @RestController
@@ -33,6 +35,24 @@ public class AdminController {
     public ResponseEntity<?> crearTecnico(@RequestBody Usuario tecnico) throws ExecutionException, InterruptedException {
         tecnicoService.crearTecnico(tecnico);
         return ResponseEntity.ok("Técnico creado exitosamente");
+    }
+
+    @PutMapping("/tecnicos/{id}")
+    @PreAuthorize("hasAuthority('ADMINISTRATIVO')")
+    public ResponseEntity<Usuario> updateTecnico(@PathVariable String id, @RequestBody Usuario tecnicoDetails) {
+        try {
+            // Asigna el ID de la ruta al objeto, ya que el servicio lo requiere para la búsqueda
+            tecnicoDetails.setId(id);
+            Usuario updatedTecnico = tecnicoService.updateTecnico(tecnicoDetails);
+            return ResponseEntity.ok(updatedTecnico);
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("Técnico no encontrado")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            }
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
     }
 
     @GetMapping("/metrics")

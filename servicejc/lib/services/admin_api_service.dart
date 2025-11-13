@@ -70,6 +70,31 @@ class AdminApiService extends ApiService {
     }
   }
 
+  Future<UserModel> updateTecnico(UserModel tecnico) async {
+    // 1. Validar ID
+    if (tecnico.id == null || tecnico.id!.isEmpty) {
+      throw Exception('El ID del técnico es requerido para la actualización.');
+    }
+
+    // 2. Envío de la solicitud PUT
+    final response = await http.put(
+      // La ruta debe coincidir con el endpoint de Java: /api/admin/tecnicos/{id}
+      Uri.parse('$baseUrl/admin/tecnicos/${tecnico.id}'),
+      headers: getHeaders(),
+      // Envía el UserModel completo. El Backend (Java) usa solo los campos no nulos.
+      body: jsonEncode(tecnico.toJson()),
+    );
+
+    if (response.statusCode == 200) {
+      // Si es exitoso, mapea el objeto UserModel devuelto por el Backend
+      return UserModel.fromJson(json.decode(response.body));
+    } else {
+      throw Exception(
+        'Error al actualizar el técnico: ${response.statusCode} - ${response.body}',
+      );
+    }
+  }
+
   Future<void> reasignarCita(
     String citaId,
     String nuevoTecnicoId,

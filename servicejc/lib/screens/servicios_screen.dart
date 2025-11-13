@@ -126,7 +126,7 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Costo: \$${product.costo?.toStringAsFixed(2) ?? 'N/A'}',
+                  'Costo: \$${product.costo.toStringAsFixed(2) ?? 'N/A'}',
                   style: AppTextStyles.listSubtitle.copyWith(
                     color: AppColors.cardTitle,
                   ),
@@ -211,10 +211,7 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Subtotal (${totalItems} ítems):',
-                  style: AppTextStyles.h3,
-                ),
+                Text('Subtotal ($totalItems ítems):', style: AppTextStyles.h3),
                 Text(
                   '\$${subtotal.toStringAsFixed(2)}',
                   style: AppTextStyles.h3,

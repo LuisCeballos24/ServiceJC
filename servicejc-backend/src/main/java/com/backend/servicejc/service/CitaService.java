@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 @Service
@@ -88,22 +90,36 @@ public class CitaService {
     public Cita updateCita(String id, Cita citaDetails) throws ExecutionException, InterruptedException {
         DocumentReference docRef = firestore.collection(COLLECTION_NAME).document(id);
         
+        // 1. Verificar existencia
         DocumentSnapshot snapshot = docRef.get().get();
         if (!snapshot.exists()) {
             throw new RuntimeException("Cita no encontrada con ID: " + id);
         }
 
-        // Aplicar las actualizaciones. 
-        // Usamos los campos existentes: tecnicoId, estado, serviciosSeleccionados, fechaHora, etc.
-        docRef.update(
-            "estado", citaDetails.getEstado(),
-            "tecnicoId", citaDetails.getTecnicoId(), // Usando el campo 'tecnicoId' existente
-            "serviciosSeleccionados", citaDetails.getServiciosSeleccionados(),
-            "fechaHora", citaDetails.getFechaHora(), // Esto actualiza la fecha/hora completa
-            "descripcion", citaDetails.getDescripcion(),
-            "costoTotal", citaDetails.getCostoTotal()
-        ).get();
+        // 2. CREAR MAPA DE ACTUALIZACIÓN CON SÓLO LOS CAMPOS PERMITIDOS
+        Map<String, Object> updates = new HashMap<>();
+
+        // Actualizar estado (siempre se debe enviar para evitar fallos de lógica)
+        if (citaDetails.getEstado() != null) {
+            updates.put("estado", citaDetails.getEstado());
+        }
         
+        // Actualizar tecnicoId (Puede ser null si se asigna "Sin Asignar". Se permite el envío de null)
+        // CRÍTICO: No hay que incluir campos como serviciosSeleccionados, fechaHora, etc.
+        updates.put("tecnicoId", citaDetails.getTecnicoId()); 
+    
+        if (citaDetails.getFechaHora() != null) {
+            updates.put("fechaHora", citaDetails.getFechaHora()); // <--- ¡ACTUALIZACIÓN AGREGADA!
+        }
+        
+        // 3. Ejecutar la actualización parcial (Solo los campos en el mapa 'updates' se modifican)
+        if (!updates.isEmpty()) {
+             docRef.update(updates).get();
+        } else {
+             throw new RuntimeException("No se proporcionaron campos válidos para actualizar la cita (Estado/Técnico).");
+        }
+        
+        // 4. Obtener y devolver la Cita completa actualizada (con los campos originales)
         DocumentSnapshot updatedSnapshot = docRef.get().get();
         return updatedSnapshot.toObject(Cita.class);
     }

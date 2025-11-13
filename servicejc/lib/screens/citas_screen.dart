@@ -8,7 +8,7 @@ import 'package:servicejc/theme/app_text_styles.dart';
 import 'package:intl/intl.dart';
 
 class CitasScreen extends StatefulWidget {
-  const CitasScreen({Key? key}) : super(key: key);
+  const CitasScreen({super.key});
 
   @override
   _CitasScreenState createState() => _CitasScreenState();
@@ -88,13 +88,107 @@ class _CitasScreenState extends State<CitasScreen> {
     });
   }
 
+  // FUNCIÓN AUXILIAR: Formatear fecha y hora para el display (con AM/PM)
+  String _formatDateTimeForDisplay(
+    DateTime date,
+    String time,
+    BuildContext context,
+  ) {
+    // 1. Convertir la hora String (HH:mm) a DateTime
+    final timeParts = time.split(':');
+    final hour = int.tryParse(timeParts.length > 0 ? timeParts[0] : '0') ?? 0;
+    final minute = int.tryParse(timeParts.length > 1 ? timeParts[1] : '0') ?? 0;
+
+    final DateTime fullDate = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      hour,
+      minute,
+    );
+
+    // 2. Usar formato 12 horas con AM/PM
+    return DateFormat('dd/MM/yyyy h:mm a').format(fullDate);
+  }
+
   void _showEditCitaDialog(CitaModel cita) {
     String? nuevoEstado = cita.status.toUpperCase();
-    String? nuevoTecnicoId = cita.tecnicoId;
+
+    // 1. Inicialización del estado interno de fecha/hora
+    DateTime _mutableSelectedDate = cita.fecha;
+
+    // Robustez Hora: Convertir HH:mm a TimeOfDay de forma segura
+    final timeParts = cita.hora.split(':');
+    final hour = int.tryParse(timeParts.length > 0 ? timeParts[0] : '0') ?? 0;
+    final minute = int.tryParse(timeParts.length > 1 ? timeParts[1] : '0') ?? 0;
+    TimeOfDay _mutableSelectedTime = TimeOfDay(hour: hour, minute: minute);
+
+    // 2. Inicialización del técnico (manejar el placeholder 'admin_scheduled')
+    String? initialTecnicoId =
+        (cita.tecnicoId == 'admin_scheduled' || cita.tecnicoId == null)
+        ? null
+        : cita.tecnicoId;
+
+    String? mutableNuevoTecnicoId = initialTecnicoId;
 
     final servicesStr =
         cita.productosSeleccionados?.map((p) => p.nombre).join(', ') ??
         'Servicios no listados: ${cita.descripcion}';
+
+    // Función para seleccionar nueva fecha/hora (usa setStateInterno)
+    Future<void> _selectDateTime(
+      BuildContext context,
+      StateSetter setStateInterno,
+    ) async {
+      final DateTime? pickedDate = await showDatePicker(
+        context: context,
+        initialDate: _mutableSelectedDate,
+        firstDate: DateTime.now().subtract(const Duration(days: 365)),
+        lastDate: DateTime(2028),
+        builder: (context, child) {
+          return Theme(
+            data: ThemeData.light().copyWith(
+              colorScheme: const ColorScheme.light(
+                primary: AppColors.accent,
+                onPrimary: AppColors.white,
+                onSurface: AppColors.primary,
+              ),
+            ),
+            child: child!,
+          );
+        },
+      );
+
+      if (pickedDate != null) {
+        final TimeOfDay? pickedTime = await showTimePicker(
+          context: context,
+          initialTime: _mutableSelectedTime,
+        );
+
+        if (pickedTime != null) {
+          setStateInterno(() {
+            _mutableSelectedDate = pickedDate;
+            _mutableSelectedTime = pickedTime;
+          });
+        }
+      }
+    }
+
+    // Función auxiliar para el display de fecha/hora DENTRO del diálogo
+    String _displayDateTime(
+      DateTime date,
+      TimeOfDay time,
+      BuildContext context,
+    ) {
+      final DateTime combined = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        time.hour,
+        time.minute,
+      );
+      return DateFormat('dd/MM/yyyy h:mm a').format(combined);
+    }
 
     showDialog(
       context: context,
@@ -115,12 +209,30 @@ class _CitasScreenState extends State<CitasScreen> {
                       ),
                     ),
                     Text(
-                      'Fecha/Hora: ${cita.fecha.day}/${cita.fecha.month}/${cita.fecha.year} ${cita.hora}',
-                      style: AppTextStyles.bodyText,
-                    ),
-                    Text(
                       'Costo: \$${cita.costoTotal.toStringAsFixed(2)}',
                       style: AppTextStyles.bodyText,
+                    ),
+                    const SizedBox(height: 20),
+
+                    // BOTÓN DE EDICIÓN DE FECHA/HORA
+                    ElevatedButton.icon(
+                      onPressed: () =>
+                          _selectDateTime(context, setStateInterno),
+                      icon: const Icon(
+                        Icons.calendar_today,
+                        size: 18,
+                        color: AppColors.primary,
+                      ),
+                      label: Text(
+                        'Fecha/Hora: ${_displayDateTime(_mutableSelectedDate, _mutableSelectedTime, context)}', // Mostrar la hora actualizada
+                        style: AppTextStyles.bodyText.copyWith(
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: AppColors.primary,
+                      ),
                     ),
                     const SizedBox(height: 20),
 
@@ -149,7 +261,7 @@ class _CitasScreenState extends State<CitasScreen> {
 
                     // Selector de Técnico
                     DropdownButtonFormField<String?>(
-                      value: nuevoTecnicoId,
+                      value: mutableNuevoTecnicoId,
                       decoration: const InputDecoration(
                         labelText: 'Asignar Técnico',
                       ),
@@ -163,11 +275,11 @@ class _CitasScreenState extends State<CitasScreen> {
                             value: tecnico.id,
                             child: Text(tecnico.nombre),
                           );
-                        }).toList(),
+                        }),
                       ],
                       onChanged: (String? newValue) {
                         setStateInterno(() {
-                          nuevoTecnicoId = newValue;
+                          mutableNuevoTecnicoId = newValue;
                         });
                       },
                     ),
@@ -183,20 +295,27 @@ class _CitasScreenState extends State<CitasScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
-                // SOLUCIÓN: Crear el objeto completo con TODOS los campos originales
-                // y solo modificar estado y técnico
+                String? finalTecnicoId = mutableNuevoTecnicoId;
+                if (finalTecnicoId == 'admin_scheduled') {
+                  finalTecnicoId = null;
+                }
+
+                // Formato HH:mm con padding para el Backend
+                final String formattedTime =
+                    '${_mutableSelectedTime.hour.toString().padLeft(2, '0')}:${_mutableSelectedTime.minute.toString().padLeft(2, '0')}';
+
+                // CREACIÓN DEL OBJETO DE ACTUALIZACIÓN
                 final CitaModel updatedCita = CitaModel(
                   id: cita.id,
                   userId: cita.userId,
-                  tecnicoId: nuevoTecnicoId,
-                  status: nuevoEstado!,
-                  fecha: cita.fecha,
-                  hora: cita.hora,
+                  tecnicoId: finalTecnicoId, // Actualizado
+                  status: nuevoEstado!, // Actualizado
+                  // CAMPOS ACTUALIZADOS
+                  fecha: _mutableSelectedDate, // <--- NUEVA FECHA
+                  hora: formattedTime, // <--- NUEVA HORA (HH:mm)
+                  // CAMPOS ORIGINALES
                   costoTotal: cita.costoTotal,
                   descripcion: cita.descripcion,
-                  // INCLUIR solo los IDs (serviciosSeleccionados)
-                  serviciosSeleccionados: cita.serviciosSeleccionados,
-                  // CRÍTICO: Incluir productosSeleccionados si existe
                   productosSeleccionados: cita.productosSeleccionados,
                 );
 
@@ -237,8 +356,6 @@ class _CitasScreenState extends State<CitasScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final DateFormat listFormatter = DateFormat('dd/MM HH:mm');
-
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -292,7 +409,7 @@ class _CitasScreenState extends State<CitasScreen> {
                           value: tecnico.id,
                           child: Text(tecnico.nombre),
                         );
-                      }).toList(),
+                      }),
                     ],
                     onChanged: (String? newValue) {
                       if (newValue != null) {
@@ -362,8 +479,9 @@ class _CitasScreenState extends State<CitasScreen> {
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Muestra el estado y el costo en una sola línea
                               Text(
-                                'Estado: ${cita.status}',
+                                'Estado: ${cita.status} | Costo: \$${cita.costoTotal.toStringAsFixed(2)}',
                                 style: AppTextStyles.bodyText.copyWith(
                                   color: AppColors.accent,
                                 ),
@@ -374,8 +492,9 @@ class _CitasScreenState extends State<CitasScreen> {
                                   color: AppColors.white70,
                                 ),
                               ),
+                              // CORRECCIÓN CLAVE: Usar la función de display para el listado (con AM/PM)
                               Text(
-                                'Fecha: ${listFormatter.format(cita.fecha)} ${cita.hora}',
+                                'Fecha: ${_formatDateTimeForDisplay(cita.fecha, cita.hora, context)}',
                                 style: AppTextStyles.bodyText.copyWith(
                                   color: AppColors.white54,
                                 ),

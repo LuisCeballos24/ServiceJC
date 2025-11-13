@@ -14,7 +14,7 @@ class CitaModel {
   final String descripcion; // Sigue siendo requerido en el constructor
   final UserModel? cliente;
   final Map<ProductModel, int>? productos;
-  final List<String>? serviciosSeleccionados;
+  final List<ProductModel>? serviciosSeleccionados;
   final List<ProductModel>? productosSeleccionados; // <--- NUEVO CAMPO LISTA
 
   CitaModel({
@@ -33,7 +33,7 @@ class CitaModel {
   });
 
   factory CitaModel.fromJson(Map<String, dynamic> json) {
-    // 1. Manejo seguro para String (incluye corrección de claves)
+    // 1. Manejo seguro para String (incluye corrección de clav  es)
     final String safeId = (json['id'] as String?) ?? 'unknown_id';
     // Backend usa 'usuarioId', Dart usa 'userId'
     final String safeUserId = (json['usuarioId'] as String?) ?? 'unknown_user';
@@ -90,15 +90,14 @@ class CitaModel {
     // 1. Combinar fecha y hora en formato ISO 8601 para que Java (Date) lo entienda:
     // Formato requerido: "yyyy-MM-ddTHH:mm:ss.sss" (Ej: 2025-10-24T10:00:00.000)
     final String fechaPart = DateFormat("yyyy-MM-dd").format(fecha);
-    final String fechaHoraStr =
-        '${fechaPart}T$hora:00.000'; // hora ya incluye minutos (HH:mm)
+    final String fechaHoraStr = '${fechaPart}T$hora:00.000';
 
     return {
       'id': id,
       'usuarioId': userId,
       'tecnicoId': tecnicoId,
       'estado': status,
-      'fechaHora': fecha.toIso8601String(),
+      'fechaHora': fechaHoraStr,
       'costoTotal': costoTotal,
       'descripcion': descripcion,
       'serviciosSeleccionados': serviciosSeleccionados, // Solo IDs
