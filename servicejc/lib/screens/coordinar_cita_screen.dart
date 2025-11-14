@@ -6,6 +6,10 @@ import 'package:servicejc/theme/app_colors.dart';
 import 'package:servicejc/theme/app_text_styles.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:servicejc/services/appointment_service.dart';
+import 'package:servicejc/models/cita_model.dart';
+import 'package:intl/intl.dart';
 
 class CoordinarCitaScreen extends StatefulWidget {
   final Map<ProductModel, int> selectedProducts;
@@ -40,8 +44,11 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
   TimeOfDay? _selectedTime;
   final TextEditingController _descriptionController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+
+  // Limita a una foto para la simplicidad del backend (MultipartFile file)
   final List<File> _selectedPhotos = [];
   final ImagePicker _picker = ImagePicker();
+  final AppointmentService _appointmentService = AppointmentService();
 
   @override
   void dispose() {
@@ -52,7 +59,7 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
   bool _isFormValid() {
     return _selectedDate != null &&
         _selectedTime != null &&
-        _descriptionController.text.trim().isNotEmpty;
+        _descriptionController.text.trim().length >= 10;
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -106,6 +113,15 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
   }
 
   Future<void> _addPhoto() async {
+    if (_selectedPhotos.length >= 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Solo se permite subir una foto por cita.'),
+        ),
+      );
+      return;
+    }
+
     final XFile? pickedFile = await _picker.pickImage(
       source: ImageSource.gallery,
       imageQuality: 70,
@@ -113,6 +129,8 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
 
     if (pickedFile != null) {
       setState(() {
+        // Limpiamos la lista si ya hay una y añadimos la nueva
+        _selectedPhotos.clear();
         _selectedPhotos.add(File(pickedFile.path));
       });
       ScaffoldMessenger.of(
@@ -125,76 +143,140 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
     }
   }
 
-  Widget _buildPhotoPreview() {
-    if (_selectedPhotos.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8.0,
-          runSpacing: 8.0,
-          children: _selectedPhotos.map((photoFile) {
-            return Stack(
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    image: DecorationImage(
-                      image: FileImage(photoFile),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-                Positioned(
-                  right: 0,
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedPhotos.remove(photoFile);
-                      });
-                    },
-                    child: const CircleAvatar(
-                      radius: 10,
-                      backgroundColor: AppColors.danger,
-                      child: Icon(
-                        Icons.close,
-                        size: 14,
-                        color: AppColors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
-  void _confirmAppointment() {
+  void _confirmAppointment() async {
     if (_formKey.currentState!.validate() && _isFormValid()) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const LoadingScreen()),
-        (route) => false,
-      );
+      // 1. Mostrar pantalla de carga
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const LoadingScreen()),
+        );
+      }
+
+      try {
+        // 2. Obtener el userId del almacenamiento local
+        final prefs = await SharedPreferences.getInstance();
+        final userId = prefs.getString('userId');
+
+        if (userId == null) {
+          throw Exception('Usuario no autenticado. Inicie sesión nuevamente.');
+        }
+
+        // 3. Obtener el archivo de la foto (solo la primera, o null)
+        final File? photoFile = _selectedPhotos.isNotEmpty
+            ? _selectedPhotos.first
+            : null;
+
+        // 4. Mapear servicios a IDs para el backend
+        final List<String> serviciosSeleccionadosIds = widget
+            .selectedProducts
+            .keys
+            .map((p) => p.id!)
+            .toList();
+
+        // 5. Crear el modelo de la cita
+        final cita = CitaModel(
+          id: '',
+          userId: userId,
+          tecnicoId: null,
+          status: 'PENDIENTE',
+          costoTotal: widget.totalCost,
+          descripcion: _descriptionController.text.trim(),
+
+          fecha: _selectedDate!,
+          hora:
+              '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}',
+
+          serviciosSeleccionados: serviciosSeleccionadosIds,
+          // imageUrl se deja null; el backend lo llenará
+          imageUrl: null,
+        );
+
+        // 6. Enviar al backend usando el nuevo método MultipartRequest
+        await _appointmentService.createCita(cita, photoFile: photoFile);
+
+        // 7. Navegación final
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const LoadingScreen()),
+            (route) => false,
+          );
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cita programada con éxito!'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      } catch (e) {
+        if (mounted) {
+          // Si falló, regresamos de la pantalla de carga
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al programar la cita: ${e.toString()}'),
+              backgroundColor: AppColors.danger,
+            ),
+          );
+        }
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Por favor, completa la fecha, hora y la descripción para confirmar.',
+            'Por favor, completa la fecha, hora y la descripción (mínimo 10 caracteres) para confirmar.',
           ),
           backgroundColor: AppColors.danger,
         ),
       );
     }
+  }
+
+  Widget _buildPhotoPreview() {
+    if (_selectedPhotos.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Muestra solo la primera foto (límite de 1 foto)
+    final photoFile = _selectedPhotos.first;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 12),
+        Stack(
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                image: DecorationImage(
+                  image: FileImage(photoFile),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+            Positioned(
+              right: 0,
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedPhotos.clear();
+                  });
+                },
+                child: const CircleAvatar(
+                  radius: 12,
+                  backgroundColor: AppColors.danger,
+                  child: Icon(Icons.close, size: 16, color: AppColors.white),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
   Widget _buildProductDetail() {
@@ -401,7 +483,7 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              '4. Agrega Fotos del Daño (Opcional)',
+              '4. Agrega Fotos del Daño (Opcional) - Una foto máx.',
               style: AppTextStyles.h4.copyWith(color: AppColors.accent),
             ),
             const SizedBox(height: 12),
@@ -411,7 +493,7 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
               label: Text(
                 _selectedPhotos.isEmpty
                     ? 'Subir Foto'
-                    : 'Subir más fotos (${_selectedPhotos.length} añadidas)',
+                    : 'Reemplazar Foto (${_selectedPhotos.length} añadida)',
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.iconButton,

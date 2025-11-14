@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import '../models/user_model.dart'; // Usar UserModel para los técnicos
+import '../models/user_model.dart';
 import '../services/admin_api_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+// Importación necesaria para el modelo de la cita
+import '../models/cita_model.dart';
 
 class TecnicosScreen extends StatefulWidget {
   const TecnicosScreen({super.key});
@@ -13,7 +15,6 @@ class TecnicosScreen extends StatefulWidget {
 
 class _TecnicosScreenState extends State<TecnicosScreen> {
   final AdminApiService _apiService = AdminApiService();
-  // Cambiamos el Future para esperar List<UserModel>
   late Future<List<UserModel>> _tecnicosFuture;
 
   @override
@@ -22,16 +23,14 @@ class _TecnicosScreenState extends State<TecnicosScreen> {
     _fetchTecnicos();
   }
 
-  // Método actualizado para llamar directamente al endpoint de técnicos
   void _fetchTecnicos() {
     setState(() {
       _tecnicosFuture = _apiService.fetchTechnicians();
     });
   }
 
-  // 1. Método para la edición (Diálogo)
+  // 1. Método para la edición (Diálogo) - Sin cambios
   void _showEditTecnicoDialog(UserModel tecnico) {
-    // Aquí puedes implementar campos para editar nombre, email, etc.
     final TextEditingController _nombreController = TextEditingController(
       text: tecnico.nombre,
     );
@@ -72,7 +71,6 @@ class _TecnicosScreenState extends State<TecnicosScreen> {
                     value!.isEmpty ? 'El nombre no puede estar vacío' : null,
                 keyboardType: TextInputType.phone,
               ),
-              // NOTA: La edición del rol o contraseña debe ser manejada con cuidado
             ],
           ),
         ),
@@ -84,26 +82,21 @@ class _TecnicosScreenState extends State<TecnicosScreen> {
           ElevatedButton(
             onPressed: () async {
               if (_formKey.currentState!.validate()) {
-                // Aquí deberías llamar al nuevo método _apiService.updateTecnico()
-                // Asegúrate de que updateTecnico en Flutter acepte un UserModel
-
-                // Usamos el ID original, que no debería ser nulo para un técnico existente (usamos !)
                 await _apiService.updateTecnico(
                   UserModel(
                     id: tecnico.id!,
                     nombre: _nombreController.text,
                     correo: _emailController.text,
                     telefono: _telefonoController.text,
-
-                    //     // Mantener el rol existente
                     rol: tecnico.rol ?? 'TECNICO',
-                    //     // No actualizar contraseña a menos que se agregue un campo de contraseña aquí.
                   ),
                 );
                 _fetchTecnicos();
                 if (mounted) Navigator.of(context).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Técnico editado (Simulado)')),
+                  const SnackBar(
+                    content: Text('Técnico editado exitosamente.'),
+                  ),
                 );
               }
             },
@@ -114,7 +107,97 @@ class _TecnicosScreenState extends State<TecnicosScreen> {
     );
   }
 
-  // 2. Método para la eliminación
+  // MÉTODO CORREGIDO: 3. Método para la Asignación de Cita (Simulada)
+  void _showAssignCitaDialog(UserModel tecnico) {
+    const String dummyCitaId = 'Cita-Pendiente-7890';
+    final DateTime oneHourLater = DateTime.now().add(const Duration(hours: 1));
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Asignar Cita (Demo) a ${tecnico.nombre}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Asignar cita $dummyCitaId al técnico ${tecnico.nombre} con el estado "ASIGNADA" para la hora simulada:',
+              style: AppTextStyles.bodyText,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Fecha/Hora: ${oneHourLater.toString().substring(0, 16)}',
+              style: AppTextStyles.bodyText.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const Text(
+              '\nEsto simula la llamada al endpoint de actualización de cita (PUT /api/citas/{id})',
+              style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                // Se han añadido los campos obligatorios que faltaban: userId, costoTotal y descripcion.
+                // También se corrige el tipo de fecha (DateTime) y hora (String) según el modelo.
+                final CitaModel updatedCita = CitaModel(
+                  id: dummyCitaId,
+                  tecnicoId: tecnico.id,
+
+                  // CAMPOS REQUERIDOS AÑADIDOS
+                  userId: 'ADMIN_ASIGNACION',
+                  status:
+                      'ASIGNADA', // Usar 'status' (el modelo usa 'status', el backend espera 'estado')
+                  costoTotal: 0.0, // Valor dummy
+                  descripcion:
+                      'Cita reasignada por el administrador', // Valor dummy
+                  // TIPOS CORREGIDOS
+                  fecha: oneHourLater, // Se requiere DateTime
+                  hora:
+                      '${oneHourLater.hour.toString().padLeft(2, '0')}:${oneHourLater.minute.toString().padLeft(2, '0')}', // Se requiere String (HH:mm)
+                );
+
+                // Llamada al API que usa PUT /api/citas/{id}
+                await _apiService.updateCita(updatedCita);
+
+                if (mounted) Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Cita $dummyCitaId asignada a ${tecnico.nombre} con éxito.',
+                    ),
+                  ),
+                );
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Error al asignar la cita: $e',
+                        style: AppTextStyles.bodyText.copyWith(
+                          color: AppColors.white,
+                        ),
+                      ),
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Asignar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 2. Método para la eliminación - Sin cambios
   void _confirmDeleteTecnico(String tecnicoId, String nombre) {
     showDialog(
       context: context,
@@ -220,9 +303,8 @@ class _TecnicosScreenState extends State<TecnicosScreen> {
                 itemCount: tecnicos.length,
                 itemBuilder: (context, index) {
                   final tecnico = tecnicos[index];
-                  // Aseguramos que nombre y email se manejen de forma segura para la UI
+                  // Aseguramos que nombre, email e id se manejen de forma segura para la UI
                   final safeNombre = tecnico.nombre ?? 'Nombre Desconocido';
-                  final safeEmail = tecnico.correo ?? 'email@desconocido.com';
                   final safeId =
                       tecnico.id ?? 'ERROR_ID'; // El ID debería existir
                   return Card(
@@ -248,14 +330,24 @@ class _TecnicosScreenState extends State<TecnicosScreen> {
                         ),
                       ),
                       subtitle: Text(
-                        tecnico.correo, // Usar el campo email de UserModel
+                        tecnico.correo ??
+                            'email@desconocido.com', // Usar el campo email de UserModel
                         style: AppTextStyles.listSubtitle.copyWith(
                           color: AppColors.white70,
                         ),
                       ),
+                      // MODIFICADO: Añadir el botón de asignar cita
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // NUEVO: Botón para asignar cita
+                          IconButton(
+                            icon: const Icon(
+                              Icons.calendar_today,
+                              color: AppColors.success,
+                            ),
+                            onPressed: () => _showAssignCitaDialog(tecnico),
+                          ),
                           IconButton(
                             icon: const Icon(
                               Icons.edit,

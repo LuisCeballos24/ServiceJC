@@ -8,6 +8,7 @@ public class Cita {
     @DocumentId
     private String id;
     private String usuarioId;
+    private String imageUrl;
     private String tecnicoId;
     private List<String> serviciosSeleccionados;
     private Date fechaHora;
@@ -20,7 +21,7 @@ public class Cita {
     public Cita() {}
 
     // Constructor con todos los campos
-    public Cita(String id, String usuarioId, String tecnicoId, List<String> serviciosSeleccionados, Date fechaHora, String estado, double costoTotal, String descripcion) {
+    public Cita(String id, String usuarioId, String tecnicoId, List<String> serviciosSeleccionados, Date fechaHora, String estado, double costoTotal, String descripcion, String imageUrl) {
         this.id = id;
         this.usuarioId = usuarioId;
         this.tecnicoId = tecnicoId;
@@ -29,6 +30,7 @@ public class Cita {
         this.estado = estado;
         this.costoTotal = costoTotal;
         this.descripcion = descripcion;
+        this.imageUrl = imageUrl;
     }
 
     // Getters y Setters
@@ -51,6 +53,15 @@ public class Cita {
     public String getUsuarioId() {
         return usuarioId;
     }
+
+     public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
 
     public void setUsuarioId(String usuarioId) {
         this.usuarioId = usuarioId;

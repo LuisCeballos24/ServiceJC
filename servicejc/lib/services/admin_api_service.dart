@@ -48,6 +48,24 @@ class AdminApiService extends ApiService {
     }
   }
 
+  Future<List<CitaModel>> fetchCitasByTechnicianId(String technicianId) async {
+    // CLAVE: Usar el nuevo endpoint /citas/tecnico/{id}
+    final response = await http.get(
+      Uri.parse('$baseUrl/citas/tecnico/$technicianId'),
+      headers: getHeaders(),
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      // El mapeo aquí funcionará gracias a los cambios de Null Safety en CitaModel.
+      return data.map((json) => CitaModel.fromJson(json)).toList();
+    } else {
+      throw Exception(
+        'Error al obtener las citas asignadas: ${response.statusCode} - ${response.body}',
+      );
+    }
+  }
+
   /// Actualiza una cita (incluyendo status y tecnicoId).
   /// Endpoint: PUT /api/citas/{id} (asumiendo que está implementado en el backend)
   Future<CitaModel> updateCita(CitaModel cita) async {

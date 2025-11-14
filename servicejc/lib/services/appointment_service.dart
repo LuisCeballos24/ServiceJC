@@ -1,10 +1,10 @@
-import 'package:http/http.dart' as http;
-import 'package:servicejc/models/cita_model.dart';
 import 'dart:convert';
-import 'package:servicejc/models/service_model.dart';
-import 'package:servicejc/models/appointment_model.dart';
-import 'package:servicejc/services/api_service.dart';
-import 'package:servicejc/models/product_model.dart'; // Importación necesaria
+import 'package:http/http.dart' as http;
+import 'dart:io'; // Necesario para File
+import '../models/cita_model.dart';
+import '../models/service_model.dart';
+import '../models/appointment_model.dart'; // Mantenido por compatibilidad
+import 'api_service.dart';
 
 class AppointmentService extends ApiService {
   Future<List<ServiceModel>> fetchServices() async {
@@ -21,7 +21,6 @@ class AppointmentService extends ApiService {
     }
   }
 
-  // CORRECCIÓN CLAVE: Agregando /api/ a la ruta de citas
   Future<List<CitaModel>> fetchCitas() async {
     final response = await http.get(
       // Usar /api/citas, que es donde responde tu CitaController
@@ -38,19 +37,43 @@ class AppointmentService extends ApiService {
     }
   }
 
-  Future<void> createAppointment(
-    AppointmentModel appointment,
-    String token,
-  ) async {
-    final response = await http.post(
-      // Asumo que esta ruta también debe ser /api/citas
-      Uri.parse('$baseUrl/citas'),
-      headers: getHeaders(token: token),
-      body: jsonEncode(appointment.toJson()),
-    );
+  /// Envía los datos de la cita y la foto (opcional) usando multipart/form-data.
+  /// El backend (Java) procesa la imagen y almacena su URL en Firestore.
+  ///
+  /// @param cita Los datos de la cita.
+  /// @param photoFile El archivo de imagen (máximo uno, o null).
+  Future<void> createCita(CitaModel cita, {File? photoFile}) async {
+    // Usamos MultipartRequest para enviar el JSON de la cita y la imagen
+    final uri = Uri.parse('$baseUrl/citas');
+    final request = http.MultipartRequest('POST', uri);
+
+    // 1. Añadir Headers de autenticación (Asumimos que getHeaders() maneja esto)
+    request.headers.addAll(getHeaders());
+
+    // 2. Añadir el archivo de imagen (si existe)
+    if (photoFile != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          // Nombre del campo esperado en Java: @RequestPart(value = "file")
+          'file',
+          photoFile.path,
+        ),
+      );
+    }
+
+    // 3. Añadir el JSON de la Cita
+    // El nombre del campo debe coincidir con @RequestPart("cita") en Java
+    final citaJsonString = jsonEncode(cita.toJson());
+    request.fields['cita'] = citaJsonString;
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode != 201) {
-      throw Exception('Error al crear la cita: ${response.body}');
+      print('Error en la respuesta del servidor: ${response.body}');
+      throw Exception(
+        'Error al crear la cita (${response.statusCode}): ${response.body}',
+      );
     }
   }
 }

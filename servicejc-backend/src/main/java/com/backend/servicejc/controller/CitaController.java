@@ -3,20 +3,25 @@ package com.backend.servicejc.controller;
 import com.backend.servicejc.model.Cita;
 import com.backend.servicejc.service.CitaService;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.multipart.MultipartFile;
+import com.backend.servicejc.service.FirebaseStorageService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/citas")
 public class CitaController {
 
     private final CitaService citaService;
+    private final FirebaseStorageService storageService;
 
-    public CitaController(CitaService citaService) {
+    public CitaController(CitaService citaService, FirebaseStorageService storageService) {
         this.citaService = citaService;
+        this.storageService = storageService;
     }
 
     @GetMapping
@@ -32,11 +37,41 @@ public class CitaController {
         }
     }
 
-    @PostMapping
-    public ResponseEntity<String> createCita(@RequestBody Cita cita) {
+    @GetMapping("/tecnico/{tecnicoId}")
+    @PreAuthorize("hasAnyAuthority('ADMINISTRATIVO', 'TECNICO')") 
+    public ResponseEntity<?> getCitasByTecnicoId(@PathVariable String tecnicoId) {
         try {
+            List<Cita> citas = citaService.getCitasByTecnicoId(tecnicoId); // Llamar al nuevo método
+            return new ResponseEntity<>(citas, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error al obtener las citas del técnico: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping(consumes = {"multipart/form-data"})
+    public ResponseEntity<String> createCita(
+        @RequestPart("cita") Cita cita, // Datos de la cita (JSON)
+        @RequestPart(value = "file", required = false) MultipartFile file // El archivo de la foto
+    ) {
+        try {
+            String imageUrl = null;
+            
+            // 1. Si existe un archivo, subirlo a Firebase Storage
+            if (file != null && !file.isEmpty()) {
+                // Definimos la carpeta de subida
+                String path = "citas/" + cita.getUsuarioId() + "/";
+                imageUrl = storageService.uploadFile(file, path);
+            }
+            
+            // 2. Asignar el URL obtenido (o null) al modelo antes de guardar en Firestore
+            cita.setImageUrl(imageUrl);
+            
+            // 3. Guardar la cita en Firestore (con el URL de la imagen)
             citaService.createCita(cita);
+            
             return new ResponseEntity<>("Cita creada exitosamente.", HttpStatus.CREATED);
+        } catch (IOException e) {
+            return new ResponseEntity<>("Error I/O al procesar la imagen: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }

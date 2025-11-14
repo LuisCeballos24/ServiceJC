@@ -1,6 +1,5 @@
-package com.backend.servicejc.config;
+package com.backend.servicejc.service;
 
-import com.backend.servicejc.service.LocationDataService;
 import com.google.cloud.firestore.Firestore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

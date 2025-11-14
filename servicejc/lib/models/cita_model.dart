@@ -11,11 +11,18 @@ class CitaModel {
   final String hora;
   final String status;
   final double costoTotal;
-  final String descripcion; // Sigue siendo requerido en el constructor
+  final String descripcion;
   final UserModel? cliente;
   final Map<ProductModel, int>? productos;
-  final List<ProductModel>? serviciosSeleccionados;
-  final List<ProductModel>? productosSeleccionados; // <--- NUEVO CAMPO LISTA
+
+  // CORRECCIÓN CLAVE 1: Ahora es List<String> para enviar IDs al backend
+  final List<String>? serviciosSeleccionados;
+
+  // Este campo es para recibir datos enriquecidos (lectura)
+  final List<ProductModel>? productosSeleccionados;
+
+  // CORRECCIÓN CLAVE 2: Nuevo campo para el URL de la imagen
+  final String? imageUrl;
 
   CitaModel({
     required this.id,
@@ -29,32 +36,37 @@ class CitaModel {
     this.cliente,
     this.productos,
     this.productosSeleccionados,
-    this.serviciosSeleccionados, // Añadir a constructor
+    // CORRECCIÓN CLAVE 1: Aceptar List<String>
+    this.serviciosSeleccionados,
+    // CORRECCIÓN CLAVE 2: Añadido al constructor
+    this.imageUrl,
   });
 
   factory CitaModel.fromJson(Map<String, dynamic> json) {
-    // 1. Manejo seguro para String (incluye corrección de clav  es)
     final String safeId = (json['id'] as String?) ?? 'unknown_id';
-    // Backend usa 'usuarioId', Dart usa 'userId'
     final String safeUserId = (json['usuarioId'] as String?) ?? 'unknown_user';
-    // Backend usa 'estado', Dart usa 'status'
     final String safeStatus = ((json['estado'] as String?) ?? 'PENDIENTE')
         .toUpperCase();
-    // FIX CLAVE: Si la descripción es null (como en tu backend), usa ''
     final String safeDescripcion = (json['descripcion'] as String?) ?? '';
+
+    // NUEVO: Para recibir el URL de la imagen del backend
+    final String? safeImageUrl = json['imageUrl'] as String?;
 
     final List<ProductModel> safeProductosSeleccionados =
         (json['productosSeleccionados'] as List<dynamic>?)
             ?.map((item) => ProductModel.fromJson(item as Map<String, dynamic>))
             .toList() ??
         [];
-    // 2. Parseo seguro para double: usa el valor o 0.0
-    // 2. Manejo seguro para double
+
+    // Manejar la lista de IDs de servicios al leer
+    final List<String>? safeServiciosSeleccionados =
+        (json['serviciosSeleccionados'] as List<dynamic>?)
+            ?.map((item) => item.toString()) // Asegura que sean Strings
+            .toList();
+
     final double safeCostoTotal =
         (json['costoTotal'] as num?)?.toDouble() ?? 0.0;
 
-    // 3. Parseo seguro para DateTime
-    // 3. FIX CLAVE: Manejo de fechaHora (tu backend no envía 'fecha' y 'hora' separadas)
     DateTime safeFecha = DateTime.now();
     String safeHora = '00:00';
 
@@ -62,33 +74,31 @@ class CitaModel {
       final fechaHoraStr = json['fechaHora'] as String?;
       if (fechaHoraStr != null) {
         safeFecha = DateTime.parse(fechaHoraStr);
-        // Extraer solo la hora (HH:mm) del objeto DateTime
         safeHora = DateFormat('HH:mm').format(safeFecha);
       }
     } catch (_) {
-      // Fallback si el string es inválido, mantiene los valores por defecto
       print('Warning: Failed to parse fechaHora. Using current time.');
     }
 
     return CitaModel(
       id: safeId,
       userId: safeUserId,
-      tecnicoId: json['tecnicoId'] as String?, // Nullable, no necesita ??
+      tecnicoId: json['tecnicoId'] as String?,
       fecha: safeFecha,
       hora: safeHora,
       status: safeStatus,
       costoTotal: safeCostoTotal,
       descripcion: safeDescripcion,
-      productosSeleccionados:
-          safeProductosSeleccionados, // Asignar la lista enriquecida // Usar el valor seguro
-      // ... (lógica para parsear cliente, productos, etc.)
+      productosSeleccionados: safeProductosSeleccionados,
+      // Asigna la lista de IDs de String
+      serviciosSeleccionados: safeServiciosSeleccionados,
+      // Asigna el URL de la imagen
+      imageUrl: safeImageUrl,
     );
   }
 
-  // El método toJson() se mantiene igual
+  // El método toJson() es lo que el cliente envía al backend
   Map<String, dynamic> toJson() {
-    // 1. Combinar fecha y hora en formato ISO 8601 para que Java (Date) lo entienda:
-    // Formato requerido: "yyyy-MM-ddTHH:mm:ss.sss" (Ej: 2025-10-24T10:00:00.000)
     final String fechaPart = DateFormat("yyyy-MM-dd").format(fecha);
     final String fechaHoraStr = '${fechaPart}T$hora:00.000';
 
@@ -100,8 +110,10 @@ class CitaModel {
       'fechaHora': fechaHoraStr,
       'costoTotal': costoTotal,
       'descripcion': descripcion,
-      'serviciosSeleccionados': serviciosSeleccionados, // Solo IDs
-      // NO incluir productosSeleccionados en toJson()
+      // Se envía List<String> si está disponible (IDs)
+      'serviciosSeleccionados': serviciosSeleccionados,
+      // Se envía el imageUrl (será null al crear la cita, ya que el backend lo manejará)
+      'imageUrl': imageUrl,
     };
   }
 }

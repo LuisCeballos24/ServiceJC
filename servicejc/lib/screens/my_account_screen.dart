@@ -81,7 +81,8 @@ class _MyAccountScreenState extends State<MyAccountScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const TechnicianPanelScreen(),
+                        builder: (context) =>
+                            const TechnicianPanelScreen(technicianId: 'userId'),
                       ),
                     );
                   },

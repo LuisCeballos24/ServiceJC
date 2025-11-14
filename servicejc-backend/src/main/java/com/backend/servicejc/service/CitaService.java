@@ -54,6 +54,30 @@ public class CitaService {
         return citas;
     }
 
+     public List<Cita> getCitasByTecnicoId(String tecnicoId) throws Exception {
+        ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME)
+                .whereEqualTo("tecnicoId", tecnicoId)
+                .get();
+
+        QuerySnapshot querySnapshot = future.get();
+        List<Cita> listaCitasEnriquecidas = new ArrayList<>(); 
+
+        if (!querySnapshot.isEmpty()) {
+            for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                Cita cita = doc.toObject(Cita.class);
+                
+                // 1. Obtener los productos (Servicios)
+                List<Producto> productos = servicioService.getProductosByIds(cita.getServiciosSeleccionados());
+                
+                // 2. ENRIQUECER con la lista de productos
+                cita.setProductosSeleccionados(productos);
+                
+                listaCitasEnriquecidas.add(cita);
+            }
+        }
+        return listaCitasEnriquecidas; 
+    }
+
     // MÉTODO MODIFICADO: Ahora devuelve DTOs enriquecidos
    public List<Cita> getAllCitas() throws Exception {
     CollectionReference citas = firestore.collection(COLLECTION_NAME);

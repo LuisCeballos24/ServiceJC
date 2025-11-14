@@ -1,10 +1,12 @@
 package com.backend.servicejc;
 
-import com.backend.servicejc.service.ServicioService;
+import com.backend.servicejc.service.ServicioService; // Importar el servicio
+import com.backend.servicejc.service.AdminInitializer; // Suponiendo que también lo necesitas
+import com.backend.servicejc.service.LocationInitializer; // Suponiendo que también lo necesitas
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Bean;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Bean;
 
 @SpringBootApplication
 public class DemoApplication {
@@ -13,12 +15,15 @@ public class DemoApplication {
         SpringApplication.run(DemoApplication.class, args);
     }
 
+    // Asegúrate de que el ServicioService esté disponible como Bean (paso 1)
     @Bean
-    public CommandLineRunner commandLineRunner(ServicioService servicioService) {
+    public CommandLineRunner commandLineRunner(
+        ServicioService servicioService, // <- Inyección aquí
+        AdminInitializer adminInitializer,
+        LocationInitializer locationInitializer
+    ) {
         return args -> {
-            System.out.println("🚀 Ejecutando CommandLineRunner para poblar los servicios...");
-            // Se ha cambiado el método de poblamiento aquí
-            servicioService.seedCategoriasYProductos();
+            // Lógica de inicialización al inicio de la aplicación
         };
     }
 }

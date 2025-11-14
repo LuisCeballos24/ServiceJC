@@ -53,6 +53,13 @@
 			<version>3.17.0</version>
 		</dependency>
 		<dependency>
+        <groupId>com.google.cloud</groupId>
+        <artifactId>google-cloud-storage</artifactId>
+        <!-- Asegúrate de usar la versión compatible con tu proyecto. 
+             Si no estás seguro, usa una versión que funcione con tu versión de Java/Spring. -->
+        <version>2.29.0</version> 
+    </dependency>
+		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<optional>true</optional>

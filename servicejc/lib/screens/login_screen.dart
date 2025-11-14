@@ -41,8 +41,9 @@ class _LoginScreenState extends State<LoginScreen> {
         final prefs = await SharedPreferences.getInstance(); //
         await prefs.setString('authToken', response.token); //
 
-        // 1. Obtener el rol del usuario
+        // 1. Obtener el rol y el ID del usuario
         final userRole = response.rol; //
+        final userId = response.userId;
 
         if (userRole != null) {
           await prefs.setString('userRole', userRole); //
@@ -50,8 +51,8 @@ class _LoginScreenState extends State<LoginScreen> {
           await prefs.remove('userRole'); //
         }
 
-        if (response.userId != null) {
-          await prefs.setString('userId', response.userId!); //
+        if (userId != null) {
+          await prefs.setString('userId', userId); //
         } else {
           await prefs.remove('userId'); //
         }
@@ -72,8 +73,12 @@ class _LoginScreenState extends State<LoginScreen> {
           nextScreen = AdminDashboardScreen(); //
         } else if (userRole == 'TECNICO') {
           //
-          // Redirigir al panel del técnico
-          nextScreen = const TechnicianPanelScreen(); //
+          // Redirigir al panel del técnico, pasando el userId
+          if (userId == null) {
+            throw Exception('ID de usuario faltante para el técnico.');
+          }
+          // CLAVE: Se pasa el ID del usuario logueado.
+          nextScreen = TechnicianPanelScreen(technicianId: userId);
         } else {
           // Por defecto (USUARIO_FINAL) al home principal
           nextScreen = const WelcomeClientScreen(); //
