@@ -47,7 +47,7 @@ class PromotionsSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        Container(
+        SizedBox(
           height: 200,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,

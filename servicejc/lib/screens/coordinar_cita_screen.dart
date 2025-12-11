@@ -113,7 +113,7 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
   }
 
   Future<void> _addPhoto() async {
-    if (_selectedPhotos.length >= 1) {
+    if (_selectedPhotos.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Solo se permite subir una foto por cita.'),
@@ -171,7 +171,7 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
         final List<String> serviciosSeleccionadosIds = widget
             .selectedProducts
             .keys
-            .map((p) => p.id!)
+            .map((p) => p.id)
             .toList();
 
         // 5. Crear el modelo de la cita

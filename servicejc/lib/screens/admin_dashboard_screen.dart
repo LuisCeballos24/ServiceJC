@@ -10,6 +10,8 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
+  const AdminDashboardScreen({super.key});
+
   @override
   _AdminDashboardScreenState createState() => _AdminDashboardScreenState();
 }

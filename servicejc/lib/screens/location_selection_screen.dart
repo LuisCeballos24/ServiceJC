@@ -314,7 +314,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
             borderSide: const BorderSide(color: AppColors.accent, width: 2),
           ),
         ),
-        value: selectedItem,
+        initialValue: selectedItem,
         items: items
             .map(
               (item) => DropdownMenuItem(

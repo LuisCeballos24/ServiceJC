@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:io'; // Necesario para File
 import '../models/cita_model.dart';
 import '../models/service_model.dart';
-import '../models/appointment_model.dart'; // Mantenido por compatibilidad
+// Mantenido por compatibilidad
 import 'api_service.dart';
 
 class AppointmentService extends ApiService {

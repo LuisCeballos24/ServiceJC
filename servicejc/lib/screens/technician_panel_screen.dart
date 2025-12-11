@@ -128,12 +128,12 @@ class _TechnicianPanelScreenState extends State<TechnicianPanelScreen> {
   void _showEditCitaDialog(CitaModel cita) {
     String? nuevoEstado = cita.status.toUpperCase();
 
-    DateTime _mutableSelectedDate = cita.fecha;
+    DateTime mutableSelectedDate = cita.fecha;
 
     final timeParts = cita.hora.split(':');
-    final hour = int.tryParse(timeParts.length > 0 ? timeParts[0] : '0') ?? 0;
+    final hour = int.tryParse(timeParts.isNotEmpty ? timeParts[0] : '0') ?? 0;
     final minute = int.tryParse(timeParts.length > 1 ? timeParts[1] : '0') ?? 0;
-    TimeOfDay _mutableSelectedTime = TimeOfDay(hour: hour, minute: minute);
+    TimeOfDay mutableSelectedTime = TimeOfDay(hour: hour, minute: minute);
 
     final servicesStr = _formatServices(cita);
     final currencyFormat = NumberFormat.currency(
@@ -143,13 +143,13 @@ class _TechnicianPanelScreenState extends State<TechnicianPanelScreen> {
     );
     final formattedCost = currencyFormat.format(cita.costoTotal);
 
-    Future<void> _selectDateTime(
+    Future<void> selectDateTime(
       BuildContext context,
       StateSetter setStateInterno,
     ) async {
       final DateTime? pickedDate = await showDatePicker(
         context: context,
-        initialDate: _mutableSelectedDate,
+        initialDate: mutableSelectedDate,
         firstDate: DateTime.now().subtract(const Duration(days: 365)),
         lastDate: DateTime(2028),
         builder: (context, child) {
@@ -169,19 +169,19 @@ class _TechnicianPanelScreenState extends State<TechnicianPanelScreen> {
       if (pickedDate != null) {
         final TimeOfDay? pickedTime = await showTimePicker(
           context: context,
-          initialTime: _mutableSelectedTime,
+          initialTime: mutableSelectedTime,
         );
 
         if (pickedTime != null) {
           setStateInterno(() {
-            _mutableSelectedDate = pickedDate;
-            _mutableSelectedTime = pickedTime;
+            mutableSelectedDate = pickedDate;
+            mutableSelectedTime = pickedTime;
           });
         }
       }
     }
 
-    String _displayDateTime(DateTime date, TimeOfDay time) {
+    String displayDateTime(DateTime date, TimeOfDay time) {
       final DateTime combined = DateTime(
         date.year,
         date.month,
@@ -221,14 +221,14 @@ class _TechnicianPanelScreenState extends State<TechnicianPanelScreen> {
                     // BOTÓN DE EDICIÓN DE FECHA/HORA
                     ElevatedButton.icon(
                       onPressed: () =>
-                          _selectDateTime(context, setStateInterno),
+                          selectDateTime(context, setStateInterno),
                       icon: const Icon(
                         Icons.calendar_today,
                         size: 18,
                         color: AppColors.primary,
                       ),
                       label: Text(
-                        'Nueva Fecha/Hora: ${_displayDateTime(_mutableSelectedDate, _mutableSelectedTime)}',
+                        'Nueva Fecha/Hora: ${displayDateTime(mutableSelectedDate, mutableSelectedTime)}',
                         style: AppTextStyles.bodyText.copyWith(
                           color: AppColors.primary,
                         ),
@@ -242,7 +242,7 @@ class _TechnicianPanelScreenState extends State<TechnicianPanelScreen> {
 
                     // Selector de Estado
                     DropdownButtonFormField<String>(
-                      value: nuevoEstado,
+                      initialValue: nuevoEstado,
                       decoration: const InputDecoration(
                         labelText: 'Cambiar Estado',
                         border: OutlineInputBorder(),
@@ -272,14 +272,14 @@ class _TechnicianPanelScreenState extends State<TechnicianPanelScreen> {
             ElevatedButton(
               onPressed: () async {
                 final String formattedTime =
-                    '${_mutableSelectedTime.hour.toString().padLeft(2, '0')}:${_mutableSelectedTime.minute.toString().padLeft(2, '0')}';
+                    '${mutableSelectedTime.hour.toString().padLeft(2, '0')}:${mutableSelectedTime.minute.toString().padLeft(2, '0')}';
 
                 final CitaModel updatedCita = CitaModel(
                   id: cita.id,
                   userId: cita.userId,
                   tecnicoId: cita.tecnicoId,
                   status: nuevoEstado!,
-                  fecha: _mutableSelectedDate,
+                  fecha: mutableSelectedDate,
                   hora: formattedTime,
                   costoTotal: cita.costoTotal,
                   descripcion: cita.descripcion,

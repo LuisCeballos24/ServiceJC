@@ -6,23 +6,31 @@ package com.backend.servicejc.model;
  */
 public class UserAddressModel {
     
-    // Campos que recibes del modelo Dart
+    // Campos que recibes del modelo Dart (Flutter)
     private String provincia;
     private String distrito;
     private String corregimiento;
-    private String callePrincipal;
-    private String referencias;
+    private String callePrincipal; // Mapeado desde 'barrio' en Flutter
+    private String referencias;    // Mapeado desde 'house' en Flutter
+    
+    // NUEVOS CAMPOS: Coordenadas del mapa
+    private Double latitude;
+    private Double longitude;
 
     // Constructor vacío requerido por Firestore/Jackson
     public UserAddressModel() {}
 
-    // Constructor con todos los campos
-    public UserAddressModel(String provincia, String distrito, String corregimiento, String callePrincipal, String referencias) {
+    // Constructor con todos los campos (incluyendo coordenadas)
+    public UserAddressModel(String provincia, String distrito, String corregimiento, 
+                            String callePrincipal, String referencias, 
+                            Double latitude, Double longitude) {
         this.provincia = provincia;
         this.distrito = distrito;
         this.corregimiento = corregimiento;
         this.callePrincipal = callePrincipal;
         this.referencias = referencias;
+        this.latitude = latitude;
+        this.longitude = longitude;
     }
 
     // --- Getters y Setters ---
@@ -65,5 +73,22 @@ public class UserAddressModel {
 
     public void setReferencias(String referencias) {
         this.referencias = referencias;
+    }
+
+    // Nuevos Getters y Setters para coordenadas
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(Double latitude) {
+        this.latitude = latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(Double longitude) {
+        this.longitude = longitude;
     }
 }

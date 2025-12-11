@@ -1,5 +1,3 @@
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 class ApiService {
   final String _baseUrl = 'http://localhost:8080/api'; // <--- Cambia esto a la IP de tu servidor

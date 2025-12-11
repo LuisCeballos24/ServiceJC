@@ -1,322 +1,106 @@
 import 'package:flutter/material.dart';
-import 'package:servicejc/models/service_model.dart';
-import 'package:servicejc/models/product_model.dart';
-import 'package:servicejc/screens/location_selection_screen.dart';
+import 'package:servicejc/models/categoria_principal_model.dart';
+import 'package:servicejc/models/service_model.dart'; 
 import 'package:servicejc/services/servicio_service.dart';
+// 💡 La siguiente pantalla es la que contiene la selección de productos/inspección
+import 'package:servicejc/screens/productos_screen.dart'; 
+
+// Asumimos que existen AppColors y AppTextStyles en lib/theme/
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 
 class ServiciosScreen extends StatefulWidget {
-  final ServiceModel servicio;
+  // Recibe la Categoría Principal seleccionada del Nivel 1
+  final CategoriaPrincipalModel categoria; 
 
-  const ServiciosScreen({super.key, required this.servicio});
+  const ServiciosScreen({super.key, required this.categoria});
 
   @override
   State<ServiciosScreen> createState() => _ServiciosScreenState();
 }
 
 class _ServiciosScreenState extends State<ServiciosScreen> {
-  late Future<List<ProductModel>> _futureProductos;
-
-  final Map<ProductModel, int> _selectedProductsWithQuantity = {};
+  late Future<List<ServiceModel>> _futureServicios;
+  final ServicioService _servicioService = ServicioService();
 
   @override
   void initState() {
     super.initState();
-    _futureProductos = ServicioService().fetchProductos(widget.servicio.id);
+    // 💡 Filtrar los servicios usando el ID de la Categoría Principal
+    _futureServicios = _servicioService.fetchServiciosByCategoriaId(widget.categoria.id);
   }
 
-  int _totalItemsCount() {
-    return _selectedProductsWithQuantity.values.fold(
-      0,
-      (sum, quantity) => sum + quantity,
-    );
-  }
-
-  double _calculateSubtotal() {
-    double subtotal = 0.0;
-    _selectedProductsWithQuantity.forEach((product, quantity) {
-      subtotal += (product.costo) * quantity;
-    });
-    return subtotal;
-  }
-
-  double _getDiscountPercentage(int totalItems) {
-    if (totalItems >= 4) {
-      return 0.12;
-    } else if (totalItems == 3) {
-      return 0.08;
-    } else if (totalItems == 2) {
-      return 0.05;
-    }
-    return 0.0;
-  }
-
-  double _calculateDiscountAmount() {
-    final subtotal = _calculateSubtotal();
-    final discountPercentage = _getDiscountPercentage(_totalItemsCount());
-    return subtotal * discountPercentage;
-  }
-
-  double _calculateTotal() {
-    final subtotal = _calculateSubtotal();
-    final discountAmount = _calculateDiscountAmount();
-    return subtotal - discountAmount;
-  }
-
-  void _updateProductQuantity(ProductModel product, int quantity) {
-    setState(() {
-      if (quantity > 0) {
-        _selectedProductsWithQuantity[product] = quantity;
-      } else {
-        _selectedProductsWithQuantity.remove(product);
-      }
-    });
-  }
-
-  void _onCotizarPressed() {
-    if (_selectedProductsWithQuantity.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Por favor, selecciona al menos un producto para continuar.',
-          ),
-          backgroundColor: AppColors.danger,
-        ),
-      );
-      return;
-    }
-
+  void _navigateToProductos(ServiceModel servicio) {
+    // Navegación a la Pantalla 3 (ProductosScreen)
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => LocationSelectionScreen(
-          selectedProducts: _selectedProductsWithQuantity,
-          subtotal: _calculateSubtotal(),
-          discountAmount: _calculateDiscountAmount(),
-          totalCost: _calculateTotal(),
-        ),
+        // Pasa el Servicio (Ej: 'Electricidad') a la pantalla de actividades
+        builder: (context) => ProductosScreen(servicio: servicio), 
       ),
     );
   }
-
-  Widget _buildProductItem(ProductModel product) {
-    final currentQuantity = _selectedProductsWithQuantity[product] ?? 0;
-    final isSelected = currentQuantity > 0;
-
-    return Card(
-      elevation: 4,
-      margin: const EdgeInsets.only(bottom: 16.0),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              product.nombre,
-              style: AppTextStyles.listTitle.copyWith(
-                color: AppColors.cardTitle,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Costo: \$${product.costo.toStringAsFixed(2) ?? 'N/A'}',
-                  style: AppTextStyles.listSubtitle.copyWith(
-                    color: AppColors.cardTitle,
-                  ),
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.remove, color: AppColors.white),
-                        onPressed: isSelected
-                            ? () => _updateProductQuantity(
-                                product,
-                                currentQuantity - 1,
-                              )
-                            : null,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                        child: Text(
-                          '$currentQuantity',
-                          style: AppTextStyles.button.copyWith(
-                            color: AppColors.white,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.add, color: AppColors.white),
-                        onPressed: () => _updateProductQuantity(
-                          product,
-                          currentQuantity + 1,
-                        ),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTotalSummary() {
-    final subtotal = _calculateSubtotal();
-    final totalItems = _totalItemsCount();
-    final discountPercentage = _getDiscountPercentage(totalItems);
-    final discountAmount = _calculateDiscountAmount();
-    final total = _calculateTotal();
-
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: const BoxDecoration(
-        color: AppColors.secondary,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 10,
-            offset: Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Subtotal ($totalItems ítems):', style: AppTextStyles.h3),
-                Text(
-                  '\$${subtotal.toStringAsFixed(2)}',
-                  style: AppTextStyles.h3,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (discountAmount > 0)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Descuento (${(discountPercentage * 100).toStringAsFixed(0)}%):',
-                    style: AppTextStyles.listSubtitle.copyWith(
-                      color: AppColors.success,
-                    ),
-                  ),
-                  Text(
-                    '-\$${discountAmount.toStringAsFixed(2)}',
-                    style: AppTextStyles.listSubtitle.copyWith(
-                      color: AppColors.success,
-                    ),
-                  ),
-                ],
-              ),
-            if (discountAmount > 0)
-              const Divider(color: AppColors.white54, height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Total a Pagar:', style: AppTextStyles.h2),
-                Text(
-                  '\$${total.toStringAsFixed(2)}',
-                  style: AppTextStyles.h1.copyWith(fontSize: 28),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _onCotizarPressed,
-              child: Text(
-                'Continuar al Domicilio',
-                style: AppTextStyles.button,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        // Título de la Categoría Principal
         title: Text(
-          'Servicio: ${widget.servicio.nombre}',
+          widget.categoria.nombre,
           style: AppTextStyles.h2.copyWith(color: AppColors.accent),
-        ),
+        ), 
         backgroundColor: AppColors.primary,
         iconTheme: const IconThemeData(color: AppColors.accent),
         titleTextStyle: AppTextStyles.h2.copyWith(color: AppColors.accent),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: FutureBuilder<List<ProductModel>>(
-              future: _futureProductos,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: AppColors.accent),
-                  );
-                } else if (snapshot.hasError) {
-                  return Center(
-                    child: Text(
-                      'Error: ${snapshot.error}',
-                      style: AppTextStyles.bodyText.copyWith(
-                        color: AppColors.softWhite,
-                      ),
-                    ),
-                  );
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return Center(
-                    child: Text(
-                      'No se encontraron productos para este servicio.',
-                      style: AppTextStyles.bodyText.copyWith(
-                        color: AppColors.softWhite,
-                      ),
-                    ),
-                  );
-                } else {
-                  final productos = snapshot.data!;
-                  return ListView.builder(
-                    padding: const EdgeInsets.all(16.0),
-                    itemCount: productos.length,
-                    itemBuilder: (context, index) =>
-                        _buildProductItem(productos[index]),
-                  );
-                }
-              },
+      body: FutureBuilder<List<ServiceModel>>(
+        future: _futureServicios,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: AppColors.accent));
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error al cargar servicios: ${snapshot.error}'));
+          }
+          if (snapshot.data == null || snapshot.data!.isEmpty) {
+            return Center(child: Text('No se encontraron servicios para ${widget.categoria.nombre}.'));
+          }
+
+          final servicios = snapshot.data!;
+
+          // Mostrar los Servicios (Electricidad, Plomería, Ebanistería, etc.) en un Grid
+          return GridView.builder(
+            padding: const EdgeInsets.all(16.0),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2, 
+              childAspectRatio: 1.5,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
             ),
-          ),
-          if (_totalItemsCount() > 0) _buildTotalSummary(),
-        ],
+            itemCount: servicios.length,
+            itemBuilder: (context, index) {
+              final servicio = servicios[index];
+              return Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: InkWell(
+                  onTap: () => _navigateToProductos(servicio),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Center(
+                      child: Text(
+                        servicio.nombre, 
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.listTitle.copyWith(color: AppColors.cardTitle),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }

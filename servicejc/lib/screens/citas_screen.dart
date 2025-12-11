@@ -96,7 +96,7 @@ class _CitasScreenState extends State<CitasScreen> {
   ) {
     // 1. Convertir la hora String (HH:mm) a DateTime
     final timeParts = time.split(':');
-    final hour = int.tryParse(timeParts.length > 0 ? timeParts[0] : '0') ?? 0;
+    final hour = int.tryParse(timeParts.isNotEmpty ? timeParts[0] : '0') ?? 0;
     final minute = int.tryParse(timeParts.length > 1 ? timeParts[1] : '0') ?? 0;
 
     final DateTime fullDate = DateTime(
@@ -115,13 +115,13 @@ class _CitasScreenState extends State<CitasScreen> {
     String? nuevoEstado = cita.status.toUpperCase();
 
     // 1. Inicialización del estado interno de fecha/hora
-    DateTime _mutableSelectedDate = cita.fecha;
+    DateTime mutableSelectedDate = cita.fecha;
 
     // Robustez Hora: Convertir HH:mm a TimeOfDay de forma segura
     final timeParts = cita.hora.split(':');
-    final hour = int.tryParse(timeParts.length > 0 ? timeParts[0] : '0') ?? 0;
+    final hour = int.tryParse(timeParts.isNotEmpty ? timeParts[0] : '0') ?? 0;
     final minute = int.tryParse(timeParts.length > 1 ? timeParts[1] : '0') ?? 0;
-    TimeOfDay _mutableSelectedTime = TimeOfDay(hour: hour, minute: minute);
+    TimeOfDay mutableSelectedTime = TimeOfDay(hour: hour, minute: minute);
 
     // 2. Inicialización del técnico (manejar el placeholder 'admin_scheduled')
     String? initialTecnicoId =
@@ -136,13 +136,13 @@ class _CitasScreenState extends State<CitasScreen> {
         'Servicios no listados: ${cita.descripcion}';
 
     // Función para seleccionar nueva fecha/hora (usa setStateInterno)
-    Future<void> _selectDateTime(
+    Future<void> selectDateTime(
       BuildContext context,
       StateSetter setStateInterno,
     ) async {
       final DateTime? pickedDate = await showDatePicker(
         context: context,
-        initialDate: _mutableSelectedDate,
+        initialDate: mutableSelectedDate,
         firstDate: DateTime.now().subtract(const Duration(days: 365)),
         lastDate: DateTime(2028),
         builder: (context, child) {
@@ -162,20 +162,20 @@ class _CitasScreenState extends State<CitasScreen> {
       if (pickedDate != null) {
         final TimeOfDay? pickedTime = await showTimePicker(
           context: context,
-          initialTime: _mutableSelectedTime,
+          initialTime: mutableSelectedTime,
         );
 
         if (pickedTime != null) {
           setStateInterno(() {
-            _mutableSelectedDate = pickedDate;
-            _mutableSelectedTime = pickedTime;
+            mutableSelectedDate = pickedDate;
+            mutableSelectedTime = pickedTime;
           });
         }
       }
     }
 
     // Función auxiliar para el display de fecha/hora DENTRO del diálogo
-    String _displayDateTime(
+    String displayDateTime(
       DateTime date,
       TimeOfDay time,
       BuildContext context,
@@ -217,14 +217,14 @@ class _CitasScreenState extends State<CitasScreen> {
                     // BOTÓN DE EDICIÓN DE FECHA/HORA
                     ElevatedButton.icon(
                       onPressed: () =>
-                          _selectDateTime(context, setStateInterno),
+                          selectDateTime(context, setStateInterno),
                       icon: const Icon(
                         Icons.calendar_today,
                         size: 18,
                         color: AppColors.primary,
                       ),
                       label: Text(
-                        'Fecha/Hora: ${_displayDateTime(_mutableSelectedDate, _mutableSelectedTime, context)}', // Mostrar la hora actualizada
+                        'Fecha/Hora: ${displayDateTime(mutableSelectedDate, mutableSelectedTime, context)}', // Mostrar la hora actualizada
                         style: AppTextStyles.bodyText.copyWith(
                           color: AppColors.primary,
                         ),
@@ -238,7 +238,7 @@ class _CitasScreenState extends State<CitasScreen> {
 
                     // Selector de Estado
                     DropdownButtonFormField<String>(
-                      value: nuevoEstado,
+                      initialValue: nuevoEstado,
                       decoration: const InputDecoration(
                         labelText: 'Estado Actual',
                       ),
@@ -261,7 +261,7 @@ class _CitasScreenState extends State<CitasScreen> {
 
                     // Selector de Técnico
                     DropdownButtonFormField<String?>(
-                      value: mutableNuevoTecnicoId,
+                      initialValue: mutableNuevoTecnicoId,
                       decoration: const InputDecoration(
                         labelText: 'Asignar Técnico',
                       ),
@@ -302,7 +302,7 @@ class _CitasScreenState extends State<CitasScreen> {
 
                 // Formato HH:mm con padding para el Backend
                 final String formattedTime =
-                    '${_mutableSelectedTime.hour.toString().padLeft(2, '0')}:${_mutableSelectedTime.minute.toString().padLeft(2, '0')}';
+                    '${mutableSelectedTime.hour.toString().padLeft(2, '0')}:${mutableSelectedTime.minute.toString().padLeft(2, '0')}';
 
                 // CREACIÓN DEL OBJETO DE ACTUALIZACIÓN
                 final CitaModel updatedCita = CitaModel(
@@ -311,7 +311,7 @@ class _CitasScreenState extends State<CitasScreen> {
                   tecnicoId: finalTecnicoId, // Actualizado
                   status: nuevoEstado!, // Actualizado
                   // CAMPOS ACTUALIZADOS
-                  fecha: _mutableSelectedDate, // <--- NUEVA FECHA
+                  fecha: mutableSelectedDate, // <--- NUEVA FECHA
                   hora: formattedTime, // <--- NUEVA HORA (HH:mm)
                   // CAMPOS ORIGINALES
                   costoTotal: cita.costoTotal,
@@ -372,7 +372,7 @@ class _CitasScreenState extends State<CitasScreen> {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: _estadoSeleccionado,
+                    initialValue: _estadoSeleccionado,
                     decoration: const InputDecoration(
                       labelText: 'Filtrar por Estado',
                     ),
@@ -395,7 +395,7 @@ class _CitasScreenState extends State<CitasScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: _tecnicoSeleccionadoId,
+                    initialValue: _tecnicoSeleccionadoId,
                     decoration: const InputDecoration(
                       labelText: 'Filtrar por Técnico',
                     ),

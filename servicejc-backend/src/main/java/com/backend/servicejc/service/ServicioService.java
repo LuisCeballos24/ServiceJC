@@ -2,6 +2,7 @@ package com.backend.servicejc.service;
 
 import com.backend.servicejc.model.Producto;
 import com.backend.servicejc.model.Servicio;
+import com.backend.servicejc.model.CategoriaPrincipalModel;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.Firestore;
@@ -14,7 +15,6 @@ import com.google.cloud.firestore.FieldPath;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -46,28 +46,90 @@ public class ServicioService {
                 .collect(Collectors.toList());
     }
 
-   public List<Producto> getProductosByIds(List<String> productoIds) throws ExecutionException, InterruptedException {
-    if (productoIds == null || productoIds.isEmpty()) {
-        return new ArrayList<>();
+    // 💡 1. Implementación del Nivel 1 (para /api/categorias_principales)
+    public List<CategoriaPrincipalModel> fetchCategoriasPrincipales() throws ExecutionException, InterruptedException {
+        // Asumiendo que usted tiene un POJO CategoriaPrincipalModel
+        ApiFuture<QuerySnapshot> future = firestore.collection("categorias_principales").get();
+        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+        return documents.stream()
+                // Aquí deberá mapear a su POJO CategoriaPrincipalModel
+                .map(doc -> doc.toObject(CategoriaPrincipalModel.class))
+                .collect(Collectors.toList());
     }
 
-    // Usar whereIn para obtener todos los documentos con una sola llamada
-    QuerySnapshot querySnapshot = firestore.collection("productos")
-            .whereIn(FieldPath.documentId(), productoIds) // Importar FieldPath
-            .get()
-            .get();
-
-    return querySnapshot.getDocuments().stream()
-            .map(doc -> {
-                Producto p = doc.toObject(Producto.class);
-                if (p != null) p.setId(doc.getId());
-                return p;
-            })
-            .filter(p -> p != null)
-            .collect(Collectors.toList());
+    public List<Servicio> fetchServiciosByCategoriaId(String categoriaPrincipalId)
+            throws ExecutionException, InterruptedException {
+        ApiFuture<QuerySnapshot> future = firestore.collection("servicios")
+                .whereEqualTo("categoriaPrincipalId", categoriaPrincipalId)
+                .get();
+        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+        return documents.stream()
+                .map(doc -> doc.toObject(Servicio.class))
+                .collect(Collectors.toList());
     }
 
-    // Método de poblamiento mejorado con la fusión de todos los datos del Excel
+    public List<Producto> getProductosByIds(List<String> productoIds) throws ExecutionException, InterruptedException {
+        if (productoIds == null || productoIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // Usar whereIn para obtener todos los documentos con una sola llamada
+        QuerySnapshot querySnapshot = firestore.collection("productos")
+                .whereIn(FieldPath.documentId(), productoIds) // Importar FieldPath
+                .get()
+                .get();
+
+        return querySnapshot.getDocuments().stream()
+                .map(doc -> {
+                    Producto p = doc.toObject(Producto.class);
+                    if (p != null)
+                        p.setId(doc.getId());
+                    return p;
+                })
+                .filter(p -> p != null)
+                .collect(Collectors.toList());
+    }
+
+    private final Map<String, String> SERVICIO_TO_CATEGORIA_MAP = Map.ofEntries(
+            Map.entry("Electricidad", "MANT_REP"),
+            Map.entry("Plomería", "MANT_REP"),
+            Map.entry("Instalaciones menores", "MANT_REP"),
+            Map.entry("Aire acondicionado (instalación y mantenimiento)", "MANT_REP"),
+            Map.entry("Soldadura", "MANT_REP"),
+            Map.entry("Aluminio y vidrio", "MANT_REP"),
+            Map.entry("Mantenimiento de Ventanas", "MANT_REP"),
+
+            Map.entry("Pintores", "ACABADOS_ESP"),
+            Map.entry("Pintura Exterior de Edificios", "ACABADOS_ESP"),
+            Map.entry("Cielo raso", "ACABADOS_ESP"),
+            Map.entry("Instalaciones decorativas", "ACABADOS_ESP"),
+            Map.entry("Revestimientos de piso y paredes", "ACABADOS_ESP"),
+
+            Map.entry("Ebanistas", "REMODEL_CONST"),
+            Map.entry("Repello Bofo", "REMODEL_CONST"),
+            Map.entry("Remodelaciones", "REMODEL_CONST"),
+            Map.entry("Construcción", "REMODEL_CONST"),
+
+            Map.entry("Limpieza Textil", "LIMPIEZA"),
+            Map.entry("Limpieza General", "LIMPIEZA"),
+            Map.entry("Limpieza de Canales", "LIMPIEZA"),
+            Map.entry("Mantenimientos preventivos", "LIMPIEZA"),
+
+            Map.entry("Filtraciones", "ESPECIALIZADOS"),
+            Map.entry("Energía Solar", "ESPECIALIZADOS"),
+            Map.entry("Inspecciones con Dron Profesional", "ESPECIALIZADOS"),
+
+            Map.entry("Reuniones y Festividades", "EVENTOS"));
+
+    private final List<Map.Entry<String, String>> CATEGORIAS_PRINCIPALES = List.of(
+            Map.entry("MANT_REP", "Mantenimiento y Reparaciones Técnicas"),
+            Map.entry("REMODEL_CONST", "Remodelación y Construcción"),
+            Map.entry("ACABADOS_ESP", "Acabados y Revestimientos"),
+            Map.entry("LIMPIEZA", "Limpieza Especializada y General"),
+            Map.entry("ESPECIALIZADOS", "Servicios Técnicos Especializados"),
+            Map.entry("EVENTOS", "Servicios para Eventos y Logística"));
+
+    // --- MÉTODO DE POBLAMIENTO MEJORADO ---
     public void seedCategoriasYProductos() throws ExecutionException, InterruptedException {
         ApiFuture<QuerySnapshot> futureServicios = firestore.collection("servicios").get();
         if (!futureServicios.get().isEmpty()) {
@@ -75,383 +137,311 @@ public class ServicioService {
             return;
         }
 
-        System.out.println("Poblando colecciones 'servicios' y 'productos'...");
+        System.out.println("Poblando colecciones 'categorias_principales', 'servicios' y 'productos'...");
 
-        // 1. Población de Categorías (Servicios) y almacenamiento de IDs en un mapa
-        Map<String, String> categoriaIds = new HashMap<>();
-        List<String> nombresCategorias = Arrays.asList(
-            "Electricidad", "Plomería", "Instalaciones menores",
-            "Aire acondicionado (instalación y mantenimiento)", "Pintores", "Ebanistas",
-            "Soldadura", "Aluminio y vidrio", "Cielo raso",
-            "Instalaciones decorativas", "Revestimientos de piso y paredes", "Remodelaciones",
-            "Construcción", "Mantenimientos preventivos", "Limpieza de sillones", // Limpieza de sillones (original)
-            "Limpieza de áreas", "Chefs", "Salonerros", "Bartender", "Decoraciones",
-            
-            // Servicios NUEVOS del Excel que no estaban en la lista inicial, pero estaban en las hojas
-            "Repello Bofo", 
-            "Pintura de Altura",
-            "Mantenimiento de Ventanas",
-            "Inspecciones con dron profesional",
-            "Limpieza Textil", // Mantenido si ya existe, si no, se agrega. Limpieza de sillones/textil se consolida
-            "Limpieza del Hogar",
-            "Reuniones y Festividades"
-        );
-        
-        // Usamos un Stream para asegurar que no haya duplicados si las hojas de cálculo
-        // repetían nombres, y luego volvemos a una lista.
-        nombresCategorias = nombresCategorias.stream().distinct().collect(Collectors.toList());
-
-        for (String nombre : nombresCategorias) {
-            Servicio categoria = new Servicio(null, nombre);
-            ApiFuture<DocumentReference> addedDocRef = firestore.collection("servicios").add(categoria);
-            categoriaIds.put(nombre, addedDocRef.get().getId());
+        // 1. Población de Categorías Principales (Nuevo nivel jerárquico)
+        Map<String, String> principalIds = new HashMap<>();
+        for (Map.Entry<String, String> entry : CATEGORIAS_PRINCIPALES) {
+            Map<String, Object> categoria = new HashMap<>();
+            categoria.put("id", entry.getKey());
+            categoria.put("nombre", entry.getValue());
+            ApiFuture<DocumentReference> addedDocRef = firestore.collection("categorias_principales").add(categoria);
+            principalIds.put(entry.getKey(), addedDocRef.get().getId());
         }
 
-        // 2. Población de Productos (ítems específicos)
+        // 2. Población de Servicios (Sub-pantalla) y enlace a la Categoría Principal
+        Map<String, String> servicioIds = new HashMap<>();
+        List<String> nombresServicios = new ArrayList<>(SERVICIO_TO_CATEGORIA_MAP.keySet());
+
+        for (String nombre : nombresServicios) {
+            Map<String, Object> servicio = new HashMap<>();
+            servicio.put("nombre", nombre);
+            String principalId = SERVICIO_TO_CATEGORIA_MAP.get(nombre);
+
+            // Usamos el ID interno como valor de referencia, aunque no es el ID de
+            // Firestore
+            // ya que la clase Servicio solo tiene 'nombre'. Si la clase Servicio tiene mas
+            // campos,
+            // usaríamos un POJO, aquí usamos Map para incluir el enlace.
+            servicio.put("categoriaPrincipalId", principalId);
+
+            ApiFuture<DocumentReference> addedDocRef = firestore.collection("servicios").add(servicio);
+            servicioIds.put(nombre, addedDocRef.get().getId());
+        }
+
+        // 3. Población de Productos (ítems específicos) con Lógica de Inspección
         List<Producto> productos = new ArrayList<>();
-        
-        // --- 1. Electricidad (Datos fusionados) ---
-        String idElectricidad = categoriaIds.get("Electricidad");
+        final Double COSTO_INSPECCION = 10.00;
+
+        // --- MANTENIMIENTO Y REPARACIONES TÉCNICAS (MANT_REP) ---
+        String idElectricidad = servicioIds.get("Electricidad");
         if (idElectricidad != null) {
-            // Datos del código original
-            productos.add(new Producto(null, "Lámpara", 25.00, idElectricidad));
-            productos.add(new Producto(null, "Tomas", 25.00, idElectricidad));
-            productos.add(new Producto(null, "Interruptores", 25.00, idElectricidad));
-            productos.add(new Producto(null, "Breaker", 25.00, idElectricidad));
-            productos.add(new Producto(null, "Abanico", 25.00, idElectricidad));
-            
-            // Datos del Excel (Electricidad)
-            productos.add(new Producto(null, "Revisión y solución de mal funcionamiento eléctrico", 15.00, idElectricidad));
-            productos.add(new Producto(null, "Asesoría en cambio de medidor eléctrico, instalación y revisión", 25.00, idElectricidad));
-            productos.add(new Producto(null, "Instalación de interruptores y revisión", 15.00, idElectricidad));
-            productos.add(new Producto(null, "Instalación y revisión de salidas eléctricas", 15.00, idElectricidad));
-            productos.add(new Producto(null, "Instalación de bombillas y revisión", 10.00, idElectricidad));
-            productos.add(new Producto(null, "Instalación y revisión de luces led", 15.00, idElectricidad));
-            productos.add(new Producto(null, "Instalación y revisión de ventiladores de techo", 30.00, idElectricidad));
-            productos.add(new Producto(null, "Instalación de caja de fusibles (si ya cuenta con el material)", 40.00, idElectricidad));
-            productos.add(new Producto(null, "Solución de mal funcionamiento", 20.00, idElectricidad));
-            productos.add(new Producto(null, "Revisión y solución eléctrica", 20.00, idElectricidad));
+            // Servicios de costo fijo
+            productos.add(
+                    new Producto(null, "Instalación/Cambio: Lámpara/Bombilla/Toma/Interruptor", 25.00, idElectricidad));
+            productos.add(
+                    new Producto(null, "Instalación/Revisión: Ventilador de Techo/Abanico", 30.00, idElectricidad));
+            productos.add(new Producto(null, "Instalación/Revisión: Breaker/Caja de Fusibles", 40.00, idElectricidad));
+            productos.add(
+                    new Producto(null, "Revisión y Solución de Mal Funcionamiento Eléctrico", 20.00, idElectricidad));
+            // Servicio que requiere inspección
+            productos.add(new Producto(null, "Inspección y Cotización de Proyecto Nuevo o Reparación Mayor",
+                    COSTO_INSPECCION, idElectricidad));
         }
 
-        // --- 2. Plomería (Datos fusionados) ---
-        String idPlomeria = categoriaIds.get("Plomería");
+        String idPlomeria = servicioIds.get("Plomería");
         if (idPlomeria != null) {
-            // Datos del código original
-            productos.add(new Producto(null, "Grifo de lavamanos de 2 mangueras", 25.00, idPlomeria));
-            productos.add(new Producto(null, "Grifo de fregador de 2 mangueras", 25.00, idPlomeria));
-            productos.add(new Producto(null, "Cambio de llave de angulo", 25.00, idPlomeria));
-            productos.add(new Producto(null, "Cambio de llave de chorro", 25.00, idPlomeria));
-            productos.add(new Producto(null, "Ferretería de inodoro", 25.00, idPlomeria));
-            productos.add(new Producto(null, "Cambio de silicón", 25.00, idPlomeria));
-
-            // Datos del Excel (Plomería)
-            productos.add(new Producto(null, "Instalación, revisión y mantenimiento de tuberías y grifos", 25.00, idPlomeria));
-            productos.add(new Producto(null, "Instalación y destape de desagües", 30.00, idPlomeria));
-            productos.add(new Producto(null, "Solución de mal funcionamiento (General)", 20.00, idPlomeria));
-            productos.add(new Producto(null, "Instalación de medidor de agua", 25.00, idPlomeria));
-            productos.add(new Producto(null, "Revisión de bomba de agua", 25.00, idPlomeria));
-            productos.add(new Producto(null, "Instalación y revisión de calentadores de cilindros", 35.00, idPlomeria));
-            productos.add(new Producto(null, "Instalación y revisión de tinacos y cisternas", 45.00, idPlomeria));
-            productos.add(new Producto(null, "Instalación, inspección y revisión de grifería y accesorios", 25.00, idPlomeria));
-            productos.add(new Producto(null, "Instalación de fregaderos de cocina", 25.00, idPlomeria));
-            productos.add(new Producto(null, "Instalación de inodoros y lavamanos", 30.00, idPlomeria));
-            productos.add(new Producto(null, "Instalación y revisión de bañeras", 40.00, idPlomeria));
-            productos.add(new Producto(null, "Instalación de platos de ducha", 35.00, idPlomeria));
+            // Servicios de costo fijo
+            productos.add(new Producto(null, "Instalación/Cambio: Grifo de Lavamanos/Fregador (2 mangueras)", 30.00,
+                    idPlomeria)); // Unificado
+            productos.add(new Producto(null, "Instalación/Cambio: Llave de Ángulo/Chorro", 30.00, idPlomeria)); // Unificado
+            productos.add(
+                    new Producto(null, "Instalación/Revisión: Ferretería de Inodoro (Cisterna)", 80.00, idPlomeria)); // Precio
+                                                                                                                      // del
+                                                                                                                      // original
+            productos.add(new Producto(null, "Instalación/Destape de Desagües y Tuberías", 30.00, idPlomeria));
+            productos.add(
+                    new Producto(null, "Instalación: Inodoro, Lavamanos, Bañera o Plato de Ducha", 40.00, idPlomeria)); // Unificado
+            // Servicio que requiere inspección
+            productos.add(new Producto(null, "Inspección y Cotización de Proyecto Nuevo o Reparación Mayor",
+                    COSTO_INSPECCION, idPlomeria));
         }
 
-        // --- 3. Instalaciones menores (Datos fusionados) ---
-        String idInstalacionesMenores = categoriaIds.get("Instalaciones menores");
+        String idInstalacionesMenores = servicioIds.get("Instalaciones menores");
         if (idInstalacionesMenores != null) {
-            // Datos del código original
-            productos.add(new Producto(null, "Cuadro", 25.00, idInstalacionesMenores));
-            productos.add(new Producto(null, "Tablillas", 25.00, idInstalacionesMenores));
-            productos.add(new Producto(null, "Soporte de TV", 30.00, idInstalacionesMenores));
-            productos.add(new Producto(null, "Instalación de cortina", 25.00, idInstalacionesMenores));
-            productos.add(new Producto(null, "Elemento decorativo", 25.00, idInstalacionesMenores));
-
-            // Datos del Excel (Instalaciones menores)
-            productos.add(new Producto(null, "Instalación de manos de ducha", 15.00, idInstalacionesMenores));
-            productos.add(new Producto(null, "Instalación de repisas", 15.00, idInstalacionesMenores));
-            productos.add(new Producto(null, "Instalación de rodapie", 10.00, idInstalacionesMenores));
-            productos.add(new Producto(null, "Instalación de riel de cortinas", 10.00, idInstalacionesMenores));
-            productos.add(new Producto(null, "Instalación de spots", 10.00, idInstalacionesMenores));
-            productos.add(new Producto(null, "Colocación de espejos", 15.00, idInstalacionesMenores));
-            productos.add(new Producto(null, "Colocación de cuadros", 10.00, idInstalacionesMenores));
-            productos.add(new Producto(null, "Reparación de luces led", 15.00, idInstalacionesMenores));
-            productos.add(new Producto(null, "Instalación y reparación de ventiladores de cielo", 30.00, idInstalacionesMenores));
+            // Servicios de costo fijo
+            productos.add(new Producto(null, "Instalación de Cuadro/Espejo/Elemento Decorativo", 25.00,
+                    idInstalacionesMenores));
+            productos.add(new Producto(null, "Instalación de Tablilla/Repisa/Rodapié", 25.00, idInstalacionesMenores));
+            productos.add(new Producto(null, "Instalación de Soporte de TV (hasta 50 pulgadas)", 30.00,
+                    idInstalacionesMenores));
+            productos.add(new Producto(null, "Instalación de Soporte de TV (más de 50 pulgadas)", 50.00,
+                    idInstalacionesMenores));
+            productos.add(new Producto(null, "Instalación de Cortina/Riel de Cortinas", 25.00, idInstalacionesMenores));
+            // Servicio que requiere inspección
+            productos.add(new Producto(null, "Inspección y Cotización por Solicitud Específica", COSTO_INSPECCION,
+                    idInstalacionesMenores));
         }
 
-        // --- 4. Aire acondicionado (Datos fusionados) ---
-        String idAireAcondicionado = categoriaIds.get("Aire acondicionado (instalación y mantenimiento)");
+        String idAireAcondicionado = servicioIds.get("Aire acondicionado (instalación y mantenimiento)");
         if (idAireAcondicionado != null) {
-            // Datos del código original
-            productos.add(new Producto(null, "Limpieza de aire de 9 a 18 btu", 30.00, idAireAcondicionado));
-            productos.add(new Producto(null, "Reparaciones inspeccion", 25.00, idAireAcondicionado));
-            productos.add(new Producto(null, "Instalaciones de 9 a 18 btu", 60.00, idAireAcondicionado));
-
-            // Datos del Excel (Aire Acondicionado)
-            productos.add(new Producto(null, "Limpieza, mantenimiento y solución de aire acondicionado (General)", 30.00, idAireAcondicionado));
-            productos.add(new Producto(null, "Instalación de aires inverter", 40.00, idAireAcondicionado));
-            productos.add(new Producto(null, "Instalación de aires tradicionales", 35.00, idAireAcondicionado));
-            productos.add(new Producto(null, "Reubicación de aires acondicionados", 40.00, idAireAcondicionado));
-            productos.add(new Producto(null, "Carga de válvula o recarga de filtro", 25.00, idAireAcondicionado));
+            // Servicios de costo fijo
+            productos.add(
+                    new Producto(null, "Limpieza y Mantenimiento de A/C (9 a 18 BTU)", 30.00, idAireAcondicionado));
+            productos.add(new Producto(null, "Carga de Válvula o Recarga de Filtro", 25.00, idAireAcondicionado));
+            // Servicio que requiere inspección
+            productos.add(
+                    new Producto(null, "Inspección y Cotización: Instalación Nueva, Reparación Mayor o Reubicación",
+                            COSTO_INSPECCION, idAireAcondicionado));
         }
 
-        // --- 5. Pintores (Datos fusionados) ---
-        String idPintores = categoriaIds.get("Pintores");
-        if (idPintores != null) {
-            // Datos del código original
-            productos.add(new Producto(null, "Costo por metro cuadrado SOLO MANO DE OBRA", 8.00, idPintores));
-            
-            // Datos del Excel (Pintores)
-            productos.add(new Producto(null, "Pintura y repello en interiores (por m2)", 15.00, idPintores));
-            productos.add(new Producto(null, "Pintura y empaste en exteriores (por m2)", 20.00, idPintores));
-        }
-
-        // --- 6. Ebanistas (Datos fusionados) ---
-        String idEbanistas = categoriaIds.get("Ebanistas");
-        if (idEbanistas != null) {
-            // Datos del código original
-            productos.add(new Producto(null, "Instalación de puertas de madera (sin cerradura)", 40.00, idEbanistas));
-            productos.add(new Producto(null, "Instalación de cerraduras en puertas de madera", 25.00, idEbanistas));
-            productos.add(new Producto(null, "Instalación de jambas de madera", 25.00, idEbanistas));
-            productos.add(new Producto(null, "Renovaciones de moviliario (laca, poliuretano y sintético) inspección", 10.00, idEbanistas));
-            productos.add(new Producto(null, "Reparaciones de moviliario inspección", 10.00, idEbanistas));
-            
-            // Datos del Excel (Ebanistería)
-            productos.add(new Producto(null, "Instalación y reparación de muebles", 35.00, idEbanistas));
-            productos.add(new Producto(null, "Instalación de closets", 45.00, idEbanistas));
-        }
-
-        // --- 7. Soldadura (Datos fusionados) ---
-        String idSoldadura = categoriaIds.get("Soldadura");
+        String idSoldadura = servicioIds.get("Soldadura");
         if (idSoldadura != null) {
-            // Datos del código original
-            productos.add(new Producto(null, "Instalación de puerta de hierro", 75.00, idSoldadura));
-            productos.add(new Producto(null, "Instalación de verja unidad", 50.00, idSoldadura));
-            productos.add(new Producto(null, "Reparación de pasamanos", 50.00, idSoldadura));
-            productos.add(new Producto(null, "Instalación de cerradura", 50.00, idSoldadura));
-            productos.add(new Producto(null, "Mantenimiento de puertas abatibles", 10.00, idSoldadura));
-            productos.add(new Producto(null, "Mantenimiento de puertas enrollables", 10.00, idSoldadura));
-            productos.add(new Producto(null, "Mantenimiento de canales", 10.00, idSoldadura));
-            
-            // Datos del Excel (Soldadura)
-            productos.add(new Producto(null, "Instalación y reparación de puertas metálicas (General)", 35.00, idSoldadura));
-            productos.add(new Producto(null, "Instalación y reparación de verjas (General)", 30.00, idSoldadura));
+            // Servicios de costo fijo
+            productos.add(new Producto(null, "Instalación de Puerta de Hierro/Verja", 75.00, idSoldadura)); // Usando el
+                                                                                                            // precio
+                                                                                                            // más alto
+            productos.add(new Producto(null, "Instalación de Cerradura (Metálica)", 50.00, idSoldadura));
+            productos.add(new Producto(null, "Reparación de Pasamanos (Simple)", 50.00, idSoldadura));
+            // Servicios que requieren inspección (Mantenimientos y Proyectos)
+            productos
+                    .add(new Producto(null, "Inspección y Cotización: Mantenimiento de Puertas/Canales, Proyecto Nuevo",
+                            COSTO_INSPECCION, idSoldadura));
         }
 
-        // --- 8. Aluminio y vidrio (Datos fusionados) ---
-        String idAluminioVidrio = categoriaIds.get("Aluminio y vidrio");
+        String idAluminioVidrio = servicioIds.get("Aluminio y vidrio");
         if (idAluminioVidrio != null) {
-            // Datos del código original
-            productos.add(new Producto(null, "Instalación de puerta", 75.00, idAluminioVidrio));
-            productos.add(new Producto(null, "Instalación de verja unidad", 50.00, idAluminioVidrio));
-            productos.add(new Producto(null, "Reparación de pasamanos", 50.00, idAluminioVidrio));
-            productos.add(new Producto(null, "Instalación de cerradura", 50.00, idAluminioVidrio));
-            productos.add(new Producto(null, "Mantenimiento de puertas abatibles", 50.00, idAluminioVidrio));
-            productos.add(new Producto(null, "Mantenimiento de puertas corrediza", 50.00, idAluminioVidrio));
-            
-            // Datos del Excel (Aluminio y Vidrio)
-            productos.add(new Producto(null, "Instalación de ventanas", 35.00, idAluminioVidrio));
-            productos.add(new Producto(null, "Instalación y reparación de puertas (General)", 30.00, idAluminioVidrio));
-            productos.add(new Producto(null, "Instalación, inspección y revisión de vidrio", 30.00, idAluminioVidrio));
-            productos.add(new Producto(null, "Reemplazo o solución de fallas en vidrios", 25.00, idAluminioVidrio));
+            // Servicios que requieren inspección (el archivo lo indica para la mayoría)
+            productos.add(
+                    new Producto(null, "Inspección y Cotización: Confección de Proyecto Nuevo o Reparación Compleja",
+                            COSTO_INSPECCION, idAluminioVidrio));
         }
 
-        // --- 9. Cielo raso (Datos fusionados) ---
-        String idCieloRaso = categoriaIds.get("Cielo raso");
-        if (idCieloRaso != null) {
-            // Datos del código original
-            productos.add(new Producto(null, "Cielo raso de gypsum liso y diseños", 10.00, idCieloRaso));
-            productos.add(new Producto(null, "Cielo raso de acm liso y diseños", 10.00, idCieloRaso));
-            productos.add(new Producto(null, "Cielo raso de pvc liso y diseños", 10.00, idCieloRaso));
-            productos.add(new Producto(null, "Cielo raso de playcem liso y diseños", 10.00, idCieloRaso));
-            productos.add(new Producto(null, "Cielo raso de modulares liso y diseños", 10.00, idCieloRaso));
-            productos.add(new Producto(null, "Cielo raso reticulado liso y diseños", 10.00, idCieloRaso));
-            
-            // Datos del Excel (Cielo Rasos)
-            productos.add(new Producto(null, "Instalación (General)", 30.00, idCieloRaso));
-            productos.add(new Producto(null, "Reparación (General)", 20.00, idCieloRaso));
+        String idMantenimientoVentanas = servicioIds.get("Mantenimiento de Ventanas");
+        if (idMantenimientoVentanas != null) {
+            // Servicio que requiere inspección
+            productos.add(new Producto(null,
+                    "Inspección y Cotización: Mantenimiento/Reparación de Ventanas (Edificios/Fábricas/Proyectos)",
+                    COSTO_INSPECCION, idMantenimientoVentanas));
         }
 
-        // --- 10. Instalaciones decorativas (Datos fusionados) ---
-        String idInstalacionesDecorativas = categoriaIds.get("Instalaciones decorativas");
-        if (idInstalacionesDecorativas != null) {
-            // Datos del código original
-            productos.add(new Producto(null, "Paneles decorativos 3d", 10.00, idInstalacionesDecorativas));
-            productos.add(new Producto(null, "Paneles de PVC decorativos de textura de mármol", 10.00, idInstalacionesDecorativas));
-            productos.add(new Producto(null, "Paneles tipo piedra decorativos", 10.00, idInstalacionesDecorativas));
-            productos.add(new Producto(null, "Separador de ambiente tipo pergola giratoria", 10.00, idInstalacionesDecorativas));
-            productos.add(new Producto(null, "Paneles wpc decorativos", 10.00, idInstalacionesDecorativas));
-            productos.add(new Producto(null, "Follaje artificial", 10.00, idInstalacionesDecorativas));
-            productos.add(new Producto(null, "Microcemento", 10.00, idInstalacionesDecorativas));
-            productos.add(new Producto(null, "Papel tapiz", 10.00, idInstalacionesDecorativas));
-            productos.add(new Producto(null, "Impresión e instalación de vinilos decorativos", 10.00, idInstalacionesDecorativas));
-            
-            // Datos del Excel (Instalaciones Decorativas)
-            productos.add(new Producto(null, "Instalación e inspección", 20.00, idInstalacionesDecorativas));
-            productos.add(new Producto(null, "Mantenimiento", 15.00, idInstalacionesDecorativas));
-        }
+        // --- REMODELACIÓN Y CONSTRUCCIÓN (REMODEL_CONST) ---
 
-        // --- 11. Revestimientos de piso y paredes (Datos fusionados) ---
-        String idRevestimientos = categoriaIds.get("Revestimientos de piso y paredes");
-        if (idRevestimientos != null) {
-            // Datos del código original
-            productos.add(new Producto(null, "Azulejos", 10.00, idRevestimientos));
-            productos.add(new Producto(null, "Mozaiquillos", 10.00, idRevestimientos));
-            productos.add(new Producto(null, "Baldosas", 10.00, idRevestimientos));
-            productos.add(new Producto(null, "Mármol", 10.00, idRevestimientos));
-            productos.add(new Producto(null, "Cuarzo", 10.00, idRevestimientos));
-            productos.add(new Producto(null, "Porcelanatos", 10.00, idRevestimientos));
-            productos.add(new Producto(null, "Piso cps", 10.00, idRevestimientos));
-            productos.add(new Producto(null, "Micro cemento", 10.00, idRevestimientos));
-            productos.add(new Producto(null, "Resina epóxica", 10.00, idRevestimientos));
-
-            // Datos del Excel (Revestimiento de Pisos y Paredes)
-            productos.add(new Producto(null, "Instalación (General)", 25.00, idRevestimientos));
-            productos.add(new Producto(null, "Reparación (General)", 20.00, idRevestimientos));
-        }
-        
-        // --- 12. Limpieza textil (Limpieza de sillones) ---
-        // Se consolida en "Limpieza Textil"
-        String idLimpiezaTextil = categoriaIds.get("Limpieza textil");
-        if (idLimpiezaTextil != null) {
-            // Datos del Excel (Limpieza Textil / Sillones)
-            productos.add(new Producto(null, "Sillón de 1 puesto", 30.00, idLimpiezaTextil));
-            productos.add(new Producto(null, "Sillón de 2 puestos", 40.00, idLimpiezaTextil));
-            productos.add(new Producto(null, "Sillón de 3 puestos", 50.00, idLimpiezaTextil));
-            productos.add(new Producto(null, "Sillones grandes tipo L (4 puestos)", 60.00, idLimpiezaTextil));
-            productos.add(new Producto(null, "Sillones grandes (5 puestos)", 75.00, idLimpiezaTextil));
-            productos.add(new Producto(null, "Comedor de 2 puestos", 30.00, idLimpiezaTextil));
-            productos.add(new Producto(null, "Comedor de 4 puestos", 40.00, idLimpiezaTextil));
-            productos.add(new Producto(null, "Comedor de 8 puestos", 60.00, idLimpiezaTextil));
-            productos.add(new Producto(null, "Colchones (unidad)", 40.00, idLimpiezaTextil));
-            productos.add(new Producto(null, "Sillones de sedan", 50.00, idLimpiezaTextil));
-            productos.add(new Producto(null, "Techo tapicería de sedan", 50.00, idLimpiezaTextil));
-            productos.add(new Producto(null, "Piso (alfombra de fábrica) de sedan", 50.00, idLimpiezaTextil));
-            productos.add(new Producto(null, "Sillones de camioneta 1", 60.00, idLimpiezaTextil));
-            productos.add(new Producto(null, "Techo tapicería de camioneta 1", 60.00, idLimpiezaTextil));
-            productos.add(new Producto(null, "Piso (alfombra de fábrica) de camioneta 1", 60.00, idLimpiezaTextil));
-            productos.add(new Producto(null, "Sillones de camioneta 2", 80.00, idLimpiezaTextil));
-            productos.add(new Producto(null, "Techo tapicería de camioneta 2", 80.00, idLimpiezaTextil));
-            productos.add(new Producto(null, "Piso (alfombra de fábrica) de camioneta 2", 80.00, idLimpiezaTextil));
-        }
-
-        // --- 13. Limpieza de áreas (Datos fusionados) ---
-        String idLimpiezaAreas = categoriaIds.get("Limpieza de áreas");
-        if (idLimpiezaAreas != null) {
-            // Datos del Excel (Limpieza de áreas)
-            productos.add(new Producto(null, "Limpieza de cocinas", 25.00, idLimpiezaAreas));
-            productos.add(new Producto(null, "Limpieza de baños", 25.00, idLimpiezaAreas));
-            productos.add(new Producto(null, "Limpieza de recámaras", 25.00, idLimpiezaAreas));
-            productos.add(new Producto(null, "Limpieza general de vivienda", 25.00, idLimpiezaAreas));
-            productos.add(new Producto(null, "Limpieza de estacionamientos con hidrolavadora", 25.00, idLimpiezaAreas));
-            productos.add(new Producto(null, "Limpieza de canales de techado", 25.00, idLimpiezaAreas));
-            
-            // Dato del Excel (Limpieza del Hogar - Fusionado en áreas)
-            productos.add(new Producto(null, "Limpieza profunda", 30.00, idLimpiezaAreas));
-        }
-        
-        // --- 14. Mantenimientos preventivos ---
-        String idMantenimientosPreventivos = categoriaIds.get("Mantenimientos preventivos");
-        if (idMantenimientosPreventivos != null) {
-            // Dato del código original
-            productos.add(new Producto(null, "Mantenimiento preventivo mensual", 25.00, idMantenimientosPreventivos));
-            
-            // Dato del Excel (Mantenimientos Preventivos)
-            productos.add(new Producto(null, "Asesoría, revisión y valoración de áreas (incluye informe con las prioridades de mantenimiento)", 50.00, idMantenimientosPreventivos));
-        }
-        
-        // --- 15. Trabajos de repello bofo de edificios (Repello Bofo) ---
-        String idRepello = categoriaIds.get("Trabajos de repello bofo de edificios");
-        if (idRepello != null) {
-             productos.add(new Producto(null, "Repello bofo de viviendas/edificios", 10.00, idRepello));
-             
-             // Dato del Excel (Repello Bofo)
-             productos.add(new Producto(null, "Inspección y reparación de repello bofo", 30.00, idRepello));
-        }
-        
-        // --- 16. Trabajos de pintura exterior de edificios (Pintura de Altura) ---
-        String idPinturaExterior = categoriaIds.get("Trabajos de pintura exterior de edificios");
-        if (idPinturaExterior != null) {
-            productos.add(new Producto(null, "Pintura de altura", 10.00, idPinturaExterior));
-            
-            // Dato del Excel (Pintura de Altura)
-            productos.add(new Producto(null, "Reparación/Pintura de altura (General)", 40.00, idPinturaExterior));
-        }
-        
-        // --- 17. Trabajo de limpieza de vidrio y cambio de silicón de ventanas (Mantenimiento de Ventanas) ---
-        String idLimpiezaVentanas = categoriaIds.get("Trabajo de limpieza de vidrio y cambio de silicón de ventanas");
-        if (idLimpiezaVentanas != null) {
-            productos.add(new Producto(null, "Mantenimiento de ventanas", 10.00, idLimpiezaVentanas));
-            
-            // Dato del Excel (Mantenimiento de Ventanas)
-            productos.add(new Producto(null, "Inspección y reparación de ventanas (General)", 25.00, idLimpiezaVentanas));
-        }
-
-        // --- 18. Inspecciones con dron profesional ---
-        String idInspeccionDrones = categoriaIds.get("Inspecciones con dron profesional");
-        if (idInspeccionDrones != null) {
-            productos.add(new Producto(null, "Inspección de áreas", 50.00, idInspeccionDrones));
-            
-            // Dato del Excel (Inspeccion con Drones)
-            productos.add(new Producto(null, "Inspección y revisión con drones", 50.00, idInspeccionDrones));
-        }
-        
-        // --- 19. Remodelaciones ---
-        String idRemodelaciones = categoriaIds.get("Remodelaciones");
+        // Todos los servicios de esta categoría requieren inspección de $10.00 para
+        // cotizar el proyecto.
+        String idRemodelaciones = servicioIds.get("Remodelaciones");
         if (idRemodelaciones != null) {
-            productos.add(new Producto(null, "Proyecto de remodelación", 10.00, idRemodelaciones));
-            
-            // Dato del Excel (Remodelaciones)
-            productos.add(new Producto(null, "Asesoría en remodelación", 50.00, idRemodelaciones));
+            productos.add(new Producto(null,
+                    "Inspección y Cotización: Planificación, Diseño, Demoliciones, Albañilería y Proyectos",
+                    COSTO_INSPECCION, idRemodelaciones));
         }
-        
-        // --- 20. Construcción ---
-        String idConstruccion = categoriaIds.get("Construcción");
+
+        String idConstruccion = servicioIds.get("Construcción");
         if (idConstruccion != null) {
-            productos.add(new Producto(null, "Proyecto de construcción", 10.00, idConstruccion));
-            
-            // Dato del Excel (Construcción)
-            productos.add(new Producto(null, "Asesoría en construcción", 50.00, idConstruccion));
+            productos.add(new Producto(null,
+                    "Inspección y Cotización: Proyectos de Construcción (Hormigón, Metálica, Liviana, Paneles)",
+                    COSTO_INSPECCION, idConstruccion));
         }
-        
-        // --- 21. Chefs ---
-        String idChefs = categoriaIds.get("Chefs");
-        if (idChefs != null) {
-            productos.add(new Producto(null, "Chef (festividades)", 25.00, idChefs));
+
+        String idRepello = servicioIds.get("Repello Bofo");
+        if (idRepello != null) {
+            productos.add(new Producto(null, "Inspección y Cotización: Repello Bofo en Viviendas o Edificios",
+                    COSTO_INSPECCION, idRepello));
         }
-        
-        // --- 22. Salonerros ---
-        String idSalonerros = categoriaIds.get("Salonerros");
-        if (idSalonerros != null) {
-            productos.add(new Producto(null, "Saloneros", 25.00, idSalonerros));
+
+        String idEbanistas = servicioIds.get("Ebanistas");
+        if (idEbanistas != null) {
+            // Servicios de costo fijo
+            productos.add(new Producto(null, "Instalación: Puerta de Madera (sin cerradura)", 40.00, idEbanistas));
+            productos.add(new Producto(null, "Instalación: Cerradura/Jamba de Madera", 25.00, idEbanistas));
+            // Servicios que requieren inspección (Mantenimientos y Proyectos)
+            productos.add(new Producto(null,
+                    "Inspección y Cotización: Proyectos Nuevos, Renovaciones, Reparaciones o Confección de Mobiliario",
+                    COSTO_INSPECCION, idEbanistas));
         }
-        
-        // --- 23. Bartender ---
-        String idBartender = categoriaIds.get("Bartender");
-        if (idBartender != null) {
-            productos.add(new Producto(null, "Bartender", 25.00, idBartender));
+
+        // --- ACABADOS Y REVESTIMIENTOS (ACABADOS_ESP) ---
+
+        String idPintores = servicioIds.get("Pintores");
+        if (idPintores != null) {
+            // Servicios de costo fijo (mano de obra)
+            productos.add(new Producto(null, "Costo por metro cuadrado (Solo mano de obra)", 8.00, idPintores));
+            productos.add(new Producto(null, "Pintura y Repello en Interiores (por m²)", 15.00, idPintores));
+            // Servicio que requiere inspección (El archivo de Pintura General lo sugiere)
+            productos.add(new Producto(null,
+                    "Inspección y Cotización: Aplicación de Pintura Especializada (Epóxica, Grado Alimenticio, etc.) o Proyectos Grandes",
+                    COSTO_INSPECCION, idPintores));
         }
-        
-        // --- 24. Decoraciones ---
-        String idDecoraciones = categoriaIds.get("Decoraciones");
-        if (idDecoraciones != null) {
-            productos.add(new Producto(null, "Decoraciones para fiestas", 25.00, idDecoraciones));
+
+        String idPinturaExterior = servicioIds.get("Pintura Exterior de Edificios");
+        if (idPinturaExterior != null) {
+            // Servicio que requiere inspección
+            productos.add(new Producto(null,
+                    "Inspección y Cotización: Pintura, Reparación o Mantenimiento de Fachadas/Azoteas/Fosos",
+                    COSTO_INSPECCION, idPinturaExterior));
         }
-        
-        // --- 25. Reuniones y Festividades ---
-        String idReuniones = categoriaIds.get("Reuniones y Festividades");
+
+        String idCieloRaso = servicioIds.get("Cielo raso");
+        if (idCieloRaso != null) {
+            productos.add(new Producto(null,
+                    "Inspección y Cotización: Proyectos Nuevos o Solicitudes Específicas (Gypsum, ACM, PVC, Modulares)",
+                    COSTO_INSPECCION, idCieloRaso));
+        }
+
+        String idInstalacionesDecorativas = servicioIds.get("Instalaciones decorativas");
+        if (idInstalacionesDecorativas != null) {
+            productos.add(new Producto(null,
+                    "Inspección y Cotización: Proyectos Nuevos, Paneles Decorativos, Microcemento o Vinilos",
+                    COSTO_INSPECCION, idInstalacionesDecorativas));
+        }
+
+        String idRevestimientos = servicioIds.get("Revestimientos de piso y paredes");
+        if (idRevestimientos != null) {
+            productos.add(new Producto(null,
+                    "Inspección y Cotización: Instalación de Revestimientos (Azulejos, Mármol, Porcelanato, Resina Epóxica)",
+                    COSTO_INSPECCION, idRevestimientos));
+        }
+
+        // --- LIMPIEZA ESPECIALIZADA Y GENERAL (LIMPIEZA) ---
+
+        String idLimpiezaTextil = servicioIds.get("Limpieza Textil");
+        if (idLimpiezaTextil != null) {
+            // Servicios de costo fijo (usando el precio más bajo del CSV como estándar para
+            // unidades)
+            productos.add(new Producto(null, "Limpieza de Sillón (1 puesto)", 40.00, idLimpiezaTextil));
+            productos
+                    .add(new Producto(null, "Limpieza de Sillón Grande (tipo L / 5 puestos)", 75.00, idLimpiezaTextil));
+            productos.add(new Producto(null, "Limpieza de Comedor (4 puestos)", 40.00, idLimpiezaTextil));
+            productos.add(new Producto(null, "Limpieza de Colchón (unidad)", 50.00, idLimpiezaTextil));
+            productos.add(
+                    new Producto(null, "Limpieza Interior de Vehículo (Sedan/Camioneta)", 60.00, idLimpiezaTextil)); // Unificado
+        }
+
+        String idLimpiezaGeneral = servicioIds.get("Limpieza General");
+        if (idLimpiezaGeneral != null) {
+            // Servicios de costo fijo (limpieza básica/por área)
+            productos.add(new Producto(null, "Limpieza de Cocina, Recámara, Sala, Baño o Garaje (por área)", 50.00,
+                    idLimpiezaGeneral)); // Unificado en 50.00
+            productos.add(new Producto(null, "Limpieza General de Vivienda/Áreas Sociales/Gimnasio", 60.00,
+                    idLimpiezaGeneral));
+            productos.add(new Producto(null, "Limpieza de Estacionamiento/Rampas con Hidrolavadora", 75.00,
+                    idLimpiezaGeneral));
+            // Servicio que requiere inspección (Describe tu solicitud)
+            productos.add(new Producto(null,
+                    "Inspección y Cotización por Solicitud Específica (Limpieza Profunda/Especializada)",
+                    COSTO_INSPECCION, idLimpiezaGeneral));
+        }
+
+        String idLimpiezaCanales = servicioIds.get("Limpieza de Canales");
+        if (idLimpiezaCanales != null) {
+            // Servicio que requiere inspección (El archivo lo indica)
+            productos.add(
+                    new Producto(null, "Inspección y Cotización: Limpieza de Canaletas de Techados y Canales Pluviales",
+                            COSTO_INSPECCION, idLimpiezaCanales));
+        }
+
+        String idMantenimientosPreventivos = servicioIds.get("Mantenimientos preventivos");
+        if (idMantenimientosPreventivos != null) {
+            // Servicio que requiere inspección (El archivo lo indica para el levantamiento)
+            productos.add(new Producto(null,
+                    "Inspección y Levantamiento para Plan de Mantenimiento Preventivo (Viviendas/Edificios/Fábricas)",
+                    COSTO_INSPECCION, idMantenimientosPreventivos));
+        }
+
+        // --- SERVICIOS TÉCNICOS ESPECIALIZADOS (ESPECIALIZADOS) ---
+
+        String idFiltraciones = servicioIds.get("Filtraciones");
+        if (idFiltraciones != null) {
+            // La inspección visual es el primer paso con un costo fijo
+            productos.add(new Producto(null, "Inspección Visual de Filtraciones para Determinación de Herramienta",
+                    COSTO_INSPECCION, idFiltraciones));
+            productos.add(new Producto(null, "Inspección con Cámara Térmica", 150.00, idFiltraciones));
+            productos.add(new Producto(null, "Inspección con Cámara Endoscópica/Ultrasonido", 150.00, idFiltraciones));
+            productos.add(new Producto(null, "Inspección con Dron (Filtraciones en Fachadas)", 150.00, idFiltraciones));
+        }
+
+        String idInspeccionDrones = servicioIds.get("Inspecciones con Dron Profesional");
+        if (idInspeccionDrones != null) {
+            // Servicio que requiere inspección (El archivo lo indica)
+            productos.add(new Producto(null,
+                    "Inspección y Cotización: Techados, Fisuras en Fachadas y Seguimiento de Trabajos",
+                    COSTO_INSPECCION, idInspeccionDrones));
+            productos.add(new Producto(null, "Servicio de Dron para Ceremonias/Eventos (Cotización Previa)",
+                    COSTO_INSPECCION, idInspeccionDrones)); // O se puede poner un costo fijo de base
+        }
+
+        String idEnergiaSolar = servicioIds.get("Energía Solar");
+        if (idEnergiaSolar != null) {
+            // Servicio que requiere inspección
+            productos.add(
+                    new Producto(null, "Inspección y Cotización: Mantenimiento, Reparaciones o Instalaciones Nuevas",
+                            COSTO_INSPECCION, idEnergiaSolar));
+        }
+
+        // --- SERVICIOS PARA EVENTOS (EVENTOS) ---
+
+        String idReuniones = servicioIds.get("Reuniones y Festividades");
         if (idReuniones != null) {
-            productos.add(new Producto(null, "Otros (Festividades)", 25.00, idReuniones));
+            // Servicios por hora (costo fijo)
+            productos.add(new Producto(null, "Contratación: Cocinero (2 horas)", 60.00, idReuniones));
+            productos.add(new Producto(null, "Contratación: Salonero (2 horas)", 50.00, idReuniones));
+            productos.add(new Producto(null, "Contratación: Bartender (2 horas)", 60.00, idReuniones));
+            productos.add(new Producto(null, "Contratación: Decorador (2 horas)", 60.00, idReuniones));
+            productos.add(
+                    new Producto(null, "Logística: Movilización/Acomodo de Mobiliario (2 horas)", 80.00, idReuniones));
+            productos.add(new Producto(null, "Logística: Valet Parking (2 horas)", 40.00, idReuniones));
+            productos.add(new Producto(null, "Logística: Conductor Designado (2 horas)", 70.00, idReuniones));
+            // Servicio que requiere inspección
+            productos.add(new Producto(null, "Inspección y Cotización por Solicitud Específica", COSTO_INSPECCION,
+                    idReuniones));
         }
 
-        // FIN DE LA FUSIÓN DE DATOS
-
+        // 4. Inserción de Productos
         for (Producto producto : productos) {
             firestore.collection("productos").add(producto);
         }
 
-        System.out.println("✅ Datos de categorías y productos poblados exitosamente.");
+        System.out.println(
+                "✅ Datos de categorías, servicios y productos poblados exitosamente con lógica de inspección.");
     }
 }

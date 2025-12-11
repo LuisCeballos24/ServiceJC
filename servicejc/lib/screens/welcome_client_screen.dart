@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:servicejc/models/service_model.dart';
+import 'package:servicejc/models/categoria_principal_model.dart'; // 💡 Nuevo modelo
+// Importamos ServiceModel porque se usa en el tipo interno WelcomeScreenData
+import 'package:servicejc/models/service_model.dart'; 
 import 'package:servicejc/services/servicio_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:servicejc/screens/admin_dashboard_screen.dart';
 
-// Importar la nueva pantalla de 'Mi Cuenta'
+// Importar las nuevas pantallas
 import 'package:servicejc/screens/my_account_screen.dart';
+import 'package:servicejc/screens/servicios_screen.dart'; // 💡 Pantalla Nivel 2
 
-// Widgets importados
+// Widgets importados (se asume que ServicesGrid fue modificado para recibir List<CategoriaPrincipalModel>)
 import 'package:servicejc/widgets/app_bar_content.dart';
 import 'package:servicejc/widgets/hero_banner.dart';
 import 'package:servicejc/widgets/promotions_section.dart';
@@ -25,9 +27,10 @@ final GlobalKey promotionsKey = GlobalKey();
 
 // Definimos un tipo para manejar los futuros en paralelo
 class WelcomeScreenData {
-  final List<ServiceModel> servicios;
+  // 💡 Carga Categorías Principales
+  final List<CategoriaPrincipalModel> categorias; 
   final bool isLoggedIn;
-  WelcomeScreenData(this.servicios, this.isLoggedIn);
+  WelcomeScreenData(this.categorias, this.isLoggedIn);
 }
 
 class WelcomeClientScreen extends StatefulWidget {
@@ -39,6 +42,7 @@ class WelcomeClientScreen extends StatefulWidget {
 
 class _WelcomeClientScreenState extends State<WelcomeClientScreen> {
   late Future<WelcomeScreenData> _futureData;
+  final ServicioService _servicioService = ServicioService();
 
   @override
   void initState() {
@@ -50,8 +54,22 @@ class _WelcomeClientScreenState extends State<WelcomeClientScreen> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('authToken');
     final isLoggedIn = token != null && token.isNotEmpty;
-    final servicios = await ServicioService().fetchServicios();
-    return WelcomeScreenData(servicios, isLoggedIn);
+    
+    // 💡 Llamada para obtener las categorías principales
+    final categorias = await _servicioService.fetchCategoriasPrincipales(); 
+    
+    return WelcomeScreenData(categorias, isLoggedIn);
+  }
+  
+  // 💡 Lógica de navegación a la Pantalla 2
+  void _navigateToServicios(CategoriaPrincipalModel categoria) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        // Navegamos al Nivel 2, pasando la categoría seleccionada
+        builder: (context) => ServiciosScreen(categoria: categoria),
+      ),
+    );
   }
 
   @override
@@ -67,7 +85,7 @@ class _WelcomeClientScreenState extends State<WelcomeClientScreen> {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.person, color: Colors.white),
+            icon: const Icon(Icons.person, color: AppColors.white),
             onPressed: () {
               Navigator.push(
                 context,
@@ -103,8 +121,12 @@ class _WelcomeClientScreenState extends State<WelcomeClientScreen> {
               child: Text('Error al cargar datos: ${snapshot.error}'),
             );
           }
+          
+          if (snapshot.data == null || snapshot.data!.categorias.isEmpty) {
+             return const Center(child: Text('No se encontraron categorías principales.'));
+          }
 
-          final servicios = snapshot.data!.servicios;
+          final categorias = snapshot.data!.categorias;
 
           return Stack(
             children: [
@@ -133,11 +155,15 @@ class _WelcomeClientScreenState extends State<WelcomeClientScreen> {
                         const SizedBox(height: 32),
                         const PromoCarousel(),
                         const SizedBox(height: 32),
-                        ServicesGrid(
+                        
+                        // 💡 ServicesGrid ahora muestra CategoriaPrincipalModel
+                        ServicesGrid( 
                           key: servicesKey,
-                          futureServicios: Future.value(servicios),
+                          items: categorias, // List<CategoriaPrincipalModel>
+                          onItemSelected: _navigateToServicios, 
                           isLargeScreen: isLargeScreen,
                         ),
+                        
                         const SizedBox(height: 32),
                         const TestimonialsSection(),
                         const SizedBox(height: 32),

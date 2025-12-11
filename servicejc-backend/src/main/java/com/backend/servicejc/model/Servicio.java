@@ -12,4 +12,5 @@ public class Servicio {
     @DocumentId // <--- ¡Asegúrate de que esta línea esté aquí!
     private String id;
     private String nombre;
+    private String categoriaPrincipalId;
 }

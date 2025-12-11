@@ -262,7 +262,7 @@ class _InstalacionesPorUnidadScreenState
   Widget _buildServiceCheckbox(Map<String, dynamic> servicio) {
     final String titulo = servicio['title'];
     final String originalTitle = servicio['originalTitle'];
-    final Map<String, dynamic>? iconoData = ServiceData.getServiceData(
+    final Map<String, dynamic> iconoData = ServiceData.getServiceData(
       originalTitle,
     );
 
@@ -398,7 +398,7 @@ class _InstalacionesPorUnidadScreenState
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Subtotal (${totalItems} ítems):',
+                  'Subtotal ($totalItems ítems):',
                   style: AppTextStyles.h3,
                 ),
                 Text(

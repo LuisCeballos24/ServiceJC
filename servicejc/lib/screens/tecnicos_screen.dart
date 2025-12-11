@@ -31,41 +31,41 @@ class _TecnicosScreenState extends State<TecnicosScreen> {
 
   // 1. Método para la edición (Diálogo) - Sin cambios
   void _showEditTecnicoDialog(UserModel tecnico) {
-    final TextEditingController _nombreController = TextEditingController(
+    final TextEditingController nombreController = TextEditingController(
       text: tecnico.nombre,
     );
-    final TextEditingController _emailController = TextEditingController(
+    final TextEditingController emailController = TextEditingController(
       text: tecnico.correo,
     );
-    final TextEditingController _telefonoController = TextEditingController(
+    final TextEditingController telefonoController = TextEditingController(
       text: tecnico.telefono,
     );
-    final _formKey = GlobalKey<FormState>();
+    final formKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Editar Técnico: ${tecnico.nombre}'),
         content: Form(
-          key: _formKey,
+          key: formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextFormField(
-                controller: _nombreController,
+                controller: nombreController,
                 decoration: const InputDecoration(labelText: 'Nombre'),
                 validator: (value) =>
                     value!.isEmpty ? 'El nombre no puede estar vacío' : null,
               ),
               TextFormField(
-                controller: _emailController,
+                controller: emailController,
                 decoration: const InputDecoration(labelText: 'Email'),
                 validator: (value) =>
                     !value!.contains('@') ? 'Email inválido' : null,
                 keyboardType: TextInputType.emailAddress,
               ),
               TextFormField(
-                controller: _telefonoController,
+                controller: telefonoController,
                 decoration: const InputDecoration(labelText: 'Phone'),
                 validator: (value) =>
                     value!.isEmpty ? 'El nombre no puede estar vacío' : null,
@@ -81,13 +81,13 @@ class _TecnicosScreenState extends State<TecnicosScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
-              if (_formKey.currentState!.validate()) {
+              if (formKey.currentState!.validate()) {
                 await _apiService.updateTecnico(
                   UserModel(
                     id: tecnico.id!,
-                    nombre: _nombreController.text,
-                    correo: _emailController.text,
-                    telefono: _telefonoController.text,
+                    nombre: nombreController.text,
+                    correo: emailController.text,
+                    telefono: telefonoController.text,
                     rol: tecnico.rol ?? 'TECNICO',
                   ),
                 );

@@ -4,17 +4,18 @@ import 'package:servicejc/screens/login_screen.dart';
 import 'package:servicejc/screens/register_screen.dart';
 import 'package:servicejc/screens/welcome_client_screen.dart';
 import 'package:servicejc/screens/admin_management_screen.dart';
-import 'package:servicejc/screens/loading_screen.dart';
 
 // Paquetes necesarios para internacionalización
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart'; // CLAVE para inicializar intl
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // Tema global
 import 'package:servicejc/theme/app_theme.dart';
 
 // Función principal asíncrona para inicializar los datos de localización
 void main() async {
+  await dotenv.load(fileName: ".env");
   // Asegurarse de que Flutter esté inicializado para las llamadas asíncronas
   WidgetsFlutterBinding.ensureInitialized();
 

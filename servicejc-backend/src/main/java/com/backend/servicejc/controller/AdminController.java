@@ -12,7 +12,6 @@ import java.util.Date;
 import java.util.List; // Importación necesaria
 import java.util.Map;
 import org.springframework.http.HttpStatus;
-import java.util.HashMap;
 import java.util.concurrent.ExecutionException;
 
 @RestController

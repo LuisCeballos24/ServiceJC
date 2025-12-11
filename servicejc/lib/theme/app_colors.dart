@@ -19,6 +19,7 @@ class AppColors {
   static const Color elevatedButton = Color.fromRGBO(52, 152, 219, 1);
   static const Color elevatedButtonForeground = Colors.white;
   static const Color activeCheckbox = Color.fromRGBO(39, 174, 96, 1);
+  static const Color warning = Color(0xFFF1C40F);
 
   static const Color white = Colors.white;
   static const Color white70 = Colors.white70;
