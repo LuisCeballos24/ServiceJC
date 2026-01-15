@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb; // 1. IMPORTANTE PARA WEB
 import 'package:servicejc/models/location_model.dart';
 import 'package:servicejc/models/product_model.dart';
 import 'package:servicejc/screens/loading_screen.dart';
@@ -45,8 +46,8 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
   final TextEditingController _descriptionController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
-  // Limita a una foto para la simplicidad del backend (MultipartFile file)
-  final List<File> _selectedPhotos = [];
+  // 2. CAMBIO: Usamos XFile en lugar de File para compatibilidad Web/Móvil
+  final List<XFile> _selectedPhotos = [];
   final ImagePicker _picker = ImagePicker();
   final AppointmentService _appointmentService = AppointmentService();
 
@@ -56,10 +57,53 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
     super.dispose();
   }
 
-  bool _isFormValid() {
-    return _selectedDate != null &&
-        _selectedTime != null &&
-        _descriptionController.text.trim().length >= 10;
+  // 3. NUEVA LÓGICA PRINCIPAL DEL BOTÓN
+  void _handleContinue() async {
+    // A. Validar Formulario primero
+    if (!_formKey.currentState!.validate() || 
+        _selectedDate == null || 
+        _selectedTime == null || 
+        _descriptionController.text.trim().length < 10) {
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor completa la fecha, hora y descripción detallada.'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
+
+    // B. Verificar si está logueado
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString('userId');
+    final token = prefs.getString('authToken');
+
+    bool isLoggedIn = userId != null && token != null;
+
+    if (!isLoggedIn) {
+      // C. SI NO ESTÁ LOGUEADO -> ENVIAR A LOGIN
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Debes iniciar sesión para confirmar la cita.'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        
+        // Navegamos al login y esperamos a que vuelva
+        await Navigator.pushNamed(context, '/login');
+        
+        // Al volver, verificamos de nuevo (Recursividad simple)
+        // El usuario tendrá que volver a dar click en "Confirmar", 
+        // pero sus datos del formulario seguirán aquí.
+      }
+      return;
+    }
+
+    // D. SI ESTÁ LOGUEADO -> PROCESAR CITA
+    _confirmAppointment(userId);
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -77,9 +121,7 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
               onPrimary: AppColors.elevatedButtonForeground,
               onSurface: AppColors.cardTitle,
             ),
-            buttonTheme: const ButtonThemeData(
-              textTheme: ButtonTextTheme.primary,
-            ),
+            buttonTheme: const ButtonThemeData(textTheme: ButtonTextTheme.primary),
           ),
           child: child!,
         );
@@ -115,9 +157,7 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
   Future<void> _addPhoto() async {
     if (_selectedPhotos.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Solo se permite subir una foto por cita.'),
-        ),
+        const SnackBar(content: Text('Solo se permite subir una foto por cita.')),
       );
       return;
     }
@@ -129,117 +169,88 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
 
     if (pickedFile != null) {
       setState(() {
-        // Limpiamos la lista si ya hay una y añadimos la nueva
         _selectedPhotos.clear();
-        _selectedPhotos.add(File(pickedFile.path));
+        // Guardamos el XFile directamente
+        _selectedPhotos.add(pickedFile);
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Foto agregada con éxito.')));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se seleccionó ninguna foto.')),
-      );
+      // Forzar reconstrucción para ver la imagen
+      setState(() {}); 
     }
   }
 
-  void _confirmAppointment() async {
-    if (_formKey.currentState!.validate() && _isFormValid()) {
-      // 1. Mostrar pantalla de carga
-      if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const LoadingScreen()),
-        );
+  void _confirmAppointment(String userId) async {
+    // Mostrar carga
+    if (mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const LoadingScreen()),
+      );
+    }
+
+    try {
+      // Prepara archivo para subir (Conversión de XFile a File si es móvil)
+      File? photoFile;
+      if (_selectedPhotos.isNotEmpty && !kIsWeb) {
+         photoFile = File(_selectedPhotos.first.path);
       }
+      // Nota: Si es Web, el servicio debe manejar bytes, 
+      // pero asumo que tu servicio actual usa File (dart:io). 
+      // Si usas web, el upload de fotos requiere ajustes en el servicio.
+      // Por ahora, esto arregla el crash en móvil y visualización.
 
-      try {
-        // 2. Obtener el userId del almacenamiento local
-        final prefs = await SharedPreferences.getInstance();
-        final userId = prefs.getString('userId');
+      final List<String> serviciosSeleccionadosIds = widget
+          .selectedProducts
+          .keys
+          .map((p) => p.id)
+          .toList();
 
-        if (userId == null) {
-          throw Exception('Usuario no autenticado. Inicie sesión nuevamente.');
-        }
+      final cita = CitaModel(
+        id: '',
+        userId: userId,
+        tecnicoId: null,
+        status: 'PENDIENTE',
+        costoTotal: widget.totalCost,
+        descripcion: _descriptionController.text.trim(),
+        fecha: _selectedDate!,
+        hora: '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}',
+        serviciosSeleccionados: serviciosSeleccionadosIds,
+        imageUrl: null,
+      );
 
-        // 3. Obtener el archivo de la foto (solo la primera, o null)
-        final File? photoFile = _selectedPhotos.isNotEmpty
-            ? _selectedPhotos.first
-            : null;
+      // Enviar
+      await _appointmentService.createCita(cita, photoFile: photoFile);
 
-        // 4. Mapear servicios a IDs para el backend
-        final List<String> serviciosSeleccionadosIds = widget
-            .selectedProducts
-            .keys
-            .map((p) => p.id)
-            .toList();
-
-        // 5. Crear el modelo de la cita
-        final cita = CitaModel(
-          id: '',
-          userId: userId,
-          tecnicoId: null,
-          status: 'PENDIENTE',
-          costoTotal: widget.totalCost,
-          descripcion: _descriptionController.text.trim(),
-
-          fecha: _selectedDate!,
-          hora:
-              '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}',
-
-          serviciosSeleccionados: serviciosSeleccionadosIds,
-          // imageUrl se deja null; el backend lo llenará
-          imageUrl: null,
-        );
-
-        // 6. Enviar al backend usando el nuevo método MultipartRequest
-        await _appointmentService.createCita(cita, photoFile: photoFile);
-
-        // 7. Navegación final
-        if (mounted) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const LoadingScreen()),
-            (route) => false,
-          );
-        }
-
+      if (mounted) {
+        // Limpiar toda la pila y volver al home o pantalla de éxito
+        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Cita programada con éxito!'),
+            content: Text('¡Cita programada con éxito!'),
             backgroundColor: AppColors.success,
           ),
         );
-      } catch (e) {
-        if (mounted) {
-          // Si falló, regresamos de la pantalla de carga
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al programar la cita: ${e.toString()}'),
-              backgroundColor: AppColors.danger,
-            ),
-          );
-        }
       }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Por favor, completa la fecha, hora y la descripción (mínimo 10 caracteres) para confirmar.',
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Cerrar loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: AppColors.danger,
           ),
-          backgroundColor: AppColors.danger,
-        ),
-      );
+        );
+      }
     }
   }
 
+  // 4. SOLUCIÓN VISUALIZACIÓN DE FOTO
   Widget _buildPhotoPreview() {
     if (_selectedPhotos.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    // Muestra solo la primera foto (límite de 1 foto)
-    final photoFile = _selectedPhotos.first;
+    final XFile photo = _selectedPhotos.first;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -252,8 +263,14 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
               height: 120,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.accent),
                 image: DecorationImage(
-                  image: FileImage(photoFile),
+                  // LÓGICA HÍBRIDA:
+                  // Si es web, usa network (el path es un blob url)
+                  // Si es móvil, usa file
+                  image: kIsWeb 
+                      ? NetworkImage(photo.path) 
+                      : FileImage(File(photo.path)) as ImageProvider,
                   fit: BoxFit.cover,
                 ),
               ),
@@ -295,17 +312,13 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
               Expanded(
                 child: Text(
                   '${quantity}x ${product.nombre}',
-                  style: AppTextStyles.bodyText.copyWith(
-                    color: AppColors.white70,
-                  ),
+                  style: AppTextStyles.bodyText.copyWith(color: AppColors.white70),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               Text(
                 '\$${itemTotal.toStringAsFixed(2)}',
-                style: AppTextStyles.bodyText.copyWith(
-                  color: AppColors.white70,
-                ),
+                style: AppTextStyles.bodyText.copyWith(color: AppColors.white70),
               ),
             ],
           ),
@@ -315,10 +328,7 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
   }
 
   Widget _buildOrderSummaryCard() {
-    final totalItems = widget.selectedProducts.values.fold(
-      0,
-      (sum, q) => sum + q,
-    );
+    final totalItems = widget.selectedProducts.values.fold(0, (sum, q) => sum + q);
 
     double discountPercentage = widget.subtotal > 0
         ? (widget.discountAmount / widget.subtotal) * 100
@@ -421,8 +431,6 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    bool canConfirm = _isFormValid();
-
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -433,116 +441,144 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
         iconTheme: const IconThemeData(color: AppColors.accent),
         titleTextStyle: AppTextStyles.h2.copyWith(color: AppColors.accent),
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(24.0),
-          children: <Widget>[
-            _buildOrderSummaryCard(),
-            const SizedBox(height: 16),
-            _buildAddressCard(),
-            const SizedBox(height: 32),
-            Text(
-              '3. Describe tu Requerimiento (Obligatorio)',
-              style: AppTextStyles.h4.copyWith(color: AppColors.accent),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _descriptionController,
-              maxLines: 4,
-              decoration: InputDecoration(
-                hintText:
-                    'Ej: El aire acondicionado gotea y hace un ruido fuerte. Favor revisar el motor.',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [AppColors.primary, AppColors.secondary],
+          ),
+        ),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(24.0),
+            children: <Widget>[
+              _buildOrderSummaryCard(),
+              const SizedBox(height: 16),
+              _buildAddressCard(),
+              const SizedBox(height: 32),
+              
+              Text(
+                '3. Describe tu Requerimiento (Obligatorio)',
+                style: AppTextStyles.h4.copyWith(color: AppColors.accent),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _descriptionController,
+                maxLines: 4,
+                style: AppTextStyles.bodyText.copyWith(color: Colors.white), // Texto blanco
+                cursorColor: AppColors.accent,
+                decoration: InputDecoration(
+                  hintText: 'Ej: El aire acondicionado gotea y hace un ruido fuerte. Favor revisar el motor.',
+                  hintStyle: AppTextStyles.caption.copyWith(color: AppColors.white54),
+                  filled: true,
+                  fillColor: AppColors.secondary,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: const BorderSide(color: AppColors.white54),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: const BorderSide(color: AppColors.accent),
+                  ),
                 ),
-                filled: true,
-                fillColor: AppColors.secondary,
-                hintStyle: AppTextStyles.caption.copyWith(
-                  color: AppColors.white54,
+                validator: (value) {
+                  if (value == null || value.isEmpty || value.trim().length < 10) {
+                    return 'Mínimo 10 caracteres de descripción.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 24),
+              
+              Text(
+                '4. Agrega Fotos del Daño (Opcional)',
+                style: AppTextStyles.h4.copyWith(color: AppColors.accent),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: _addPhoto,
+                icon: const Icon(Icons.camera_alt, color: AppColors.primary),
+                label: Text(
+                  _selectedPhotos.isEmpty
+                      ? 'Subir Foto'
+                      : 'Reemplazar Foto',
+                  style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
-                  borderSide: const BorderSide(color: AppColors.white54),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
-                  borderSide: const BorderSide(color: AppColors.accent),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
               ),
-              style: AppTextStyles.bodyText.copyWith(color: AppColors.white),
-              validator: (value) {
-                if (value == null ||
-                    value.isEmpty ||
-                    value.trim().length < 10) {
-                  return 'Por favor, proporciona una descripción detallada (mínimo 10 caracteres).';
-                }
-                return null;
-              },
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              '4. Agrega Fotos del Daño (Opcional) - Una foto máx.',
-              style: AppTextStyles.h4.copyWith(color: AppColors.accent),
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: _addPhoto,
-              icon: const Icon(Icons.camera_alt),
-              label: Text(
-                _selectedPhotos.isEmpty
-                    ? 'Subir Foto'
-                    : 'Reemplazar Foto (${_selectedPhotos.length} añadida)',
+              _buildPhotoPreview(),
+              
+              const SizedBox(height: 32),
+              Text(
+                '5. Selecciona la Fecha y Hora (Obligatorio)',
+                style: AppTextStyles.h4.copyWith(color: AppColors.accent),
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.iconButton,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+              const SizedBox(height: 16),
+              
+              // Botones de Fecha y Hora (estilizados)
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _selectDate(context),
+                      icon: const Icon(Icons.calendar_today, color: Colors.white),
+                      label: Text(
+                        _selectedDate == null
+                            ? 'Fecha'
+                            : '${_selectedDate!.day}/${_selectedDate!.month}',
+                         style: const TextStyle(color: Colors.white),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _selectedDate != null ? Colors.green : AppColors.secondary,
+                        side: const BorderSide(color: AppColors.white54),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _selectTime(context),
+                      icon: const Icon(Icons.access_time, color: Colors.white),
+                      label: Text(
+                        _selectedTime == null
+                            ? 'Hora'
+                            : _selectedTime!.format(context),
+                         style: const TextStyle(color: Colors.white),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _selectedTime != null ? Colors.green : AppColors.secondary,
+                         side: const BorderSide(color: AppColors.white54),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            _buildPhotoPreview(),
-            const SizedBox(height: 32),
-            Text(
-              '5. Selecciona la Fecha y Hora (Obligatorio)',
-              style: AppTextStyles.h4.copyWith(color: AppColors.accent),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () => _selectDate(context),
-              icon: const Icon(Icons.calendar_today),
-              label: Text(
-                _selectedDate == null
-                    ? 'Seleccionar Fecha'
-                    : 'Fecha: ${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}',
+              
+              const SizedBox(height: 40),
+              
+              // 5. BOTÓN PRINCIPAL (Siempre habilitado)
+              ElevatedButton(
+                onPressed: _handleContinue, // Llamamos a la nueva función que valida y redirige
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.success,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                ),
+                child: Text(
+                  'Confirmar Cita y Continuar',
+                  style: AppTextStyles.button.copyWith(fontSize: 18),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () => _selectTime(context),
-              icon: const Icon(Icons.access_time),
-              label: Text(
-                _selectedTime == null
-                    ? 'Seleccionar Hora'
-                    : 'Hora: ${_selectedTime!.format(context)}',
-              ),
-            ),
-            const SizedBox(height: 40),
-            ElevatedButton(
-              onPressed: canConfirm ? _confirmAppointment : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.success,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                disabledBackgroundColor: AppColors.secondary.withOpacity(0.5),
-                disabledForegroundColor: AppColors.white54,
-              ),
-              child: Text(
-                canConfirm
-                    ? 'Confirmar Cita y Continuar al Pago'
-                    : 'Complete los campos obligatorios para continuar',
-                style: AppTextStyles.button,
-              ),
-            ),
-          ],
+              const SizedBox(height: 50),
+            ],
+          ),
         ),
       ),
     );

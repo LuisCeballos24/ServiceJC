@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb; // Para detectar Web
-import 'package:http/http.dart' as http; // Para peticiones Web
-import 'dart:convert'; // Para decodificar JSON Web
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 import 'package:servicejc/models/user_model.dart';
 import 'package:servicejc/models/user_address_model.dart';
@@ -13,8 +13,8 @@ import '../theme/app_text_styles.dart';
 import 'package:servicejc/screens/map_picker_screen.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
-// Importa flutter_dotenv si usas variables de entorno para la API KEY
-// import 'package:flutter_dotenv/flutter_dotenv.dart';
+// 1. IMPORTAR DOTENV
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -48,8 +48,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   double? _longitude;
   bool _isAutoFilling = false;
 
-  // TU API KEY DE GOOGLE (Asegúrate de tenerla aquí o en .env)
-  static const String _googleApiKey = "AIzaSyAxO8pq5j9Owbp6dlfBg_sWpCWTogKWylE";
+  // 2. CAMBIO DE SEGURIDAD: Leer desde el archivo .env
+  // Si no encuentra la llave, devuelve un string vacío para evitar crash, pero el mapa fallará si no está configurado.
+  final String _googleApiKey = dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
 
   @override
   void initState() {
@@ -57,6 +58,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _loadProvinces();
   }
 
+  // ... (El resto de tu código sigue igual: dispose, _loadProvinces, etc.)
+  
+  // SOLAMENTE COPIA EL RESTO DEL CÓDIGO TAL CUAL LO TENÍAS
+  // (El cambio importante ya se hizo arriba en la variable _googleApiKey)
+  
   @override
   void dispose() {
     _nameController.dispose();
@@ -68,8 +74,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _locationService.dispose();
     super.dispose();
   }
-
-  // --- MÉTODOS DE CARGA DE DATOS ---
 
   Future<void> _loadProvinces() async {
     try {
@@ -108,9 +112,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // --- UTILIDADES DE TEXTO ---
-  
-  // Normaliza el texto para comparar (quita tildes y mayúsculas)
   String _normalize(String? text) {
     if (text == null) return '';
     return text.toLowerCase()
@@ -123,8 +124,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         .trim();
   }
 
-  // --- LÓGICA DE AUTO-RELLENADO ---
-
   Future<void> _autoFillAddressFromCoordinates(double lat, double long) async {
     setState(() => _isAutoFilling = true);
 
@@ -135,9 +134,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       String? street;
       String? number;
 
-      // 1. OBTENER DATOS DE GOOGLE (Soporte Web y Móvil)
       if (kIsWeb) {
-        // Lógica para WEB (Usando API HTTP directa)
+        // Usa la variable _googleApiKey que ahora viene del .env
         final url = Uri.parse(
             'https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$long&key=$_googleApiKey&language=es');
         final response = await http.get(url);
@@ -153,11 +151,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               final name = c['long_name'];
               
               if (types.contains('administrative_area_level_1')) {
-                googleProvince = name; // Provincia
+                googleProvince = name; 
               } else if (types.contains('administrative_area_level_2')) {
-                googleDistrict = name; // Distrito
+                googleDistrict = name; 
               } else if (types.contains('locality') || types.contains('sublocality') || types.contains('neighborhood')) {
-                // Google varía, tomamos el primero que encontremos como posible corregimiento
                 googleCorregimiento ??= name;
               } else if (types.contains('route')) {
                 street = name;
@@ -168,7 +165,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
           }
         }
       } else {
-        // Lógica para MÓVIL (Usando paquete geocoding)
         List<Placemark> placemarks = await placemarkFromCoordinates(lat, long);
         if (placemarks.isNotEmpty) {
           final place = placemarks.first;
@@ -180,11 +176,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
       }
 
-      debugPrint("Google Data -> P: $googleProvince, D: $googleDistrict, C: $googleCorregimiento");
-
-      // 2. EMPAREJAR CON NUESTRAS LISTAS
+      // Resto de la lógica de emparejamiento...
       if (googleProvince != null) {
-        // A. Buscar Provincia
         LocationModel? foundProvince;
         try {
            final search = _normalize(googleProvince);
@@ -195,10 +188,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
         if (foundProvince != null) {
            setState(() => _selectedProvince = foundProvince);
-           // Cargar distritos y ESPERAR
            await _loadDistricts(foundProvince.id);
 
-           // B. Buscar Distrito
            if (googleDistrict != null) {
              LocationModel? foundDistrict;
              try {
@@ -210,10 +201,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
              if (foundDistrict != null) {
                setState(() => _selectedDistrict = foundDistrict);
-               // Cargar corregimientos y ESPERAR
                await _loadCorregimientos(foundDistrict.id);
 
-               // C. Buscar Corregimiento
                if (googleCorregimiento != null) {
                  LocationModel? foundCorregimiento;
                  try {
@@ -232,7 +221,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
       }
 
-      // 3. RELLENAR CAMPOS DE TEXTO
       if (street != null && street.isNotEmpty) {
         _barrioController.text = street;
       }
@@ -257,7 +245,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // MÉTODO: ABRIR EL MAPA
   Future<void> _pickLocation() async {
     final result = await Navigator.push<LatLng>(
       context,
@@ -269,14 +256,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _latitude = result.latitude;
         _longitude = result.longitude;
       });
-      
-      // Ejecutar auto-rellenado
       await _autoFillAddressFromCoordinates(result.latitude, result.longitude);
     }
   }
 
   void _registerUser() async {
-      // Validaciones básicas
       if (_selectedProvince == null || _selectedDistrict == null || _selectedCorregimiento == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Complete la dirección (Provincia, Distrito, Corregimiento).'), backgroundColor: AppColors.danger),
@@ -291,7 +275,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
           return; 
       }
 
-      // Construcción del modelo
       final userAddress = UserAddressModel(
         province: _selectedProvince!.name,
         district: _selectedDistrict!.name,
@@ -313,14 +296,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         rol: userRole,
       );
 
-      // Envío al backend
       try {
         String message = await _authService.registerUser(user);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(message), backgroundColor: AppColors.success),
           );
-          Navigator.pop(context); // Volver al login
+          Navigator.pop(context); 
         }
       } catch (e) {
         if (mounted) {
@@ -331,7 +313,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
   }
 
-  // WIDGETS AUXILIARES
   Widget _buildTextField(TextEditingController controller, String label, {bool isPassword = false, TextInputType keyboardType = TextInputType.text}) {
     return TextField(
       controller: controller,
@@ -421,7 +402,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // BOTÓN MAPA
                   ElevatedButton.icon(
                     onPressed: _isAutoFilling ? null : _pickLocation,
                     icon: Icon(_latitude != null ? Icons.check_circle : Icons.map, color: Colors.white),

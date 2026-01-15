@@ -6,7 +6,7 @@ import '../models/location_model.dart';
 
 class LocationService {
   // *** ACTUALIZA ESTA URL BASE CON LA DIRECCIÓN REAL DE TU BACKEND SPRING BOOT ***
-  static const String _apiBaseUrl = 'http://localhost:8080/api/locations';
+  static const String _apiBaseUrl = 'https://servicejc-api-469322066501.us-central1.run.app/api/locations';
   // O si tienes una URL pública: 'https://tu-backend-servicejc.com/api/locations'
   // **************************************************************************
 

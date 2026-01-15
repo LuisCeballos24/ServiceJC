@@ -7,7 +7,9 @@ import 'package:servicejc/screens/my_account_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 
-// Convertimos a StatefulWidget para manejar el estado del token
+// 💡 IMPORTACIÓN ACTUALIZADA (Si el archivo está en la carpeta widgets)
+import 'package:servicejc/widgets/universal_search_delegate.dart'; 
+
 class AppBarContent extends StatefulWidget {
   final bool isLargeScreen;
   const AppBarContent({super.key, required this.isLargeScreen});
@@ -17,56 +19,43 @@ class AppBarContent extends StatefulWidget {
 }
 
 class _AppBarContentState extends State<AppBarContent> {
-  bool _isLoggedIn =
-      false; // Estado local para saber si el usuario está logueado
+  bool _isLoggedIn = false; 
 
   @override
   void initState() {
     super.initState();
-    // Verificamos el estado de la sesión al inicio
     _checkLoginStatus();
   }
 
-  // Función para verificar si existe un token y actualizar el estado
   void _checkLoginStatus() async {
     final prefs = await SharedPreferences.getInstance();
-    // Usamos 'authToken' ya que es la clave que usamos en WelcomeClientScreen
     final token = prefs.getString('authToken');
     setState(() {
       _isLoggedIn = token != null && token.isNotEmpty;
     });
   }
 
-  // Función para cerrar sesión
   void _logout() async {
-    // 1. Eliminar el token localmente (debe estar implementado en AuthService)
     await AuthService().signOut();
-
-    // 2. Notificamos y actualizamos el estado
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Sesión cerrada correctamente.')),
-    );
-
-    // 3. Actualizamos el estado de la barra (para mostrar 'Iniciar Sesión')
-    setState(() {
-      _isLoggedIn = false;
-    });
-
-    // 4. Redirigir a la pantalla principal y limpiar la pila
-    Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sesión cerrada correctamente.')),
+      );
+      setState(() {
+        _isLoggedIn = false;
+      });
+      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+    }
   }
 
-  // Widget que crea el menú desplegable (Popup Menu)
   Widget _buildAccountButton(BuildContext context) {
-    // Definimos las opciones que verá el usuario
     final List<PopupMenuItem<String>> menuItems;
 
     if (_isLoggedIn) {
-      // Opciones para usuario LOGUEADO
       menuItems = [
         const PopupMenuItem<String>(
-          value: 'account', // <--- CAMBIAR EL VALOR A 'account'
-          child: Text('Mi Cuenta'), // <--- CAMBIAR EL TEXTO
+          value: 'account', 
+          child: Text('Mi Cuenta'), 
         ),
         const PopupMenuItem<String>(
           value: 'settings',
@@ -78,7 +67,6 @@ class _AppBarContentState extends State<AppBarContent> {
         ),
       ];
     } else {
-      // Opciones para usuario NO LOGUEADO
       menuItems = [
         const PopupMenuItem<String>(
           value: 'login',
@@ -95,17 +83,12 @@ class _AppBarContentState extends State<AppBarContent> {
       onSelected: (String result) {
         switch (result) {
           case 'login':
-            Navigator.of(
-              context,
-            ).pushNamed('/login').then((_) => _checkLoginStatus());
+            Navigator.of(context).pushNamed('/login').then((_) => _checkLoginStatus());
             break;
           case 'register':
-            Navigator.of(
-              context,
-            ).pushNamed('/register').then((_) => _checkLoginStatus());
+            Navigator.of(context).pushNamed('/register').then((_) => _checkLoginStatus());
             break;
-          case 'account': // <--- AHORA EL CASO ES 'account'
-            // CORRECCIÓN: Navegar a la pantalla de 'Mi Cuenta'
+          case 'account': 
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const MyAccountScreen()),
@@ -116,18 +99,15 @@ class _AppBarContentState extends State<AppBarContent> {
             break;
         }
       },
-      itemBuilder: (BuildContext context) =>
-          menuItems, // Ítems del menú (antes de 'child')
-      // Aseguramos que el color del icono en la versión compacta sea el acento
+      itemBuilder: (BuildContext context) => menuItems, 
       icon: widget.isLargeScreen
           ? null
           : const Icon(Icons.account_circle, color: AppColors.accent, size: 30),
-      // El icono/botón que dispara el menú (AHORA AL FINAL)
       child: widget.isLargeScreen
           ? Container(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
               decoration: BoxDecoration(
-                color: AppColors.accent, // Color de fondo del botón
+                color: AppColors.accent, 
                 borderRadius: BorderRadius.circular(8),
                 boxShadow: [
                   BoxShadow(
@@ -157,7 +137,7 @@ class _AppBarContentState extends State<AppBarContent> {
                 color: AppColors.accent,
                 size: 30,
               ),
-              onPressed: null, // El PopupMenuButton gestiona el click
+              onPressed: null, 
             ),
     );
   }
@@ -167,12 +147,10 @@ class _AppBarContentState extends State<AppBarContent> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
+        // --- LOGO (IZQUIERDA) ---
         TextButton(
           onPressed: () {
-            // Regresar a la pantalla de bienvenida (limpiando la pila de navegación)
-            Navigator.of(
-              context,
-            ).pushNamedAndRemoveUntil('/', (route) => false);
+            Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
           },
           style: TextButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -185,12 +163,18 @@ class _AppBarContentState extends State<AppBarContent> {
                 size: 40,
               ),
               const SizedBox(width: 8),
-              Text('ServiceJC', style: AppTextStyles.h1),
+              Image.asset(
+                'assets/images/logojcservicios.png', 
+                height: 40, 
+                fit: BoxFit.contain, 
+              ),
             ],
           ),
         ),
 
+        // --- BARRA DERECHA ---
         if (widget.isLargeScreen)
+          // MODO ESCRITORIO (PC)
           Row(
             children: [
               TextButton(
@@ -203,13 +187,46 @@ class _AppBarContentState extends State<AppBarContent> {
                 child: const Text('Contacto', style: AppTextStyles.h3),
               ),
               const SizedBox(width: 16),
-              _buildAccountButton(context), // Botón de cuenta dinámico
+              
+              // 💡 LUPA (PC)
+              IconButton(
+                icon: const Icon(Icons.search, color: AppColors.accent),
+                tooltip: 'Buscar',
+                onPressed: () {
+                  showSearch(
+                    context: context, 
+                    // Sin parámetros = búsqueda global (servicios)
+                    delegate: UniversalSearchDelegate(), 
+                  );
+                },
+              ),
+              const SizedBox(width: 16),
+              // -----------------------
+
+              _buildAccountButton(context), 
             ],
           )
         else
-          _buildAccountButton(
-            context,
-          ), // Botón de cuenta dinámico (versión compacta)
+          // MODO MÓVIL
+          Row(
+            children: [
+               // 💡 LUPA (MÓVIL)
+               IconButton(
+                icon: const Icon(Icons.search, color: AppColors.accent, size: 28),
+                onPressed: () {
+                  showSearch(
+                    context: context, 
+                    // Sin parámetros = búsqueda global (servicios)
+                    delegate: UniversalSearchDelegate(), 
+                  );
+                },
+              ),
+              const SizedBox(width: 8),
+              // -----------------------
+
+               _buildAccountButton(context), 
+            ],
+          )
       ],
     );
   }

@@ -1,6 +1,6 @@
 
 class ApiService {
-  final String _baseUrl = 'http://localhost:8080/api'; // <--- Cambia esto a la IP de tu servidor
+  final String _baseUrl = 'https://servicejc-api-469322066501.us-central1.run.app/api'; // <--- Cambia esto a la IP de tu servidor
   
   // Método para obtener la URL base
   String get baseUrl => _baseUrl;
