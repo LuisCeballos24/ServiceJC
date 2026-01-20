@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:servicejc/models/categoria_principal_model.dart'; // 💡 Nuevo modelo
-// Importamos ServiceModel porque se usa en el tipo interno WelcomeScreenData
-import 'package:servicejc/models/service_model.dart'; 
+import 'package:servicejc/models/categoria_principal_model.dart';
+// Importamos ServiceModel si lo necesitas, pero aquí nos basamos en CategoriaPrincipalModel
 import 'package:servicejc/services/servicio_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Importar las nuevas pantallas
+// Pantallas
 import 'package:servicejc/screens/my_account_screen.dart';
-import 'package:servicejc/screens/servicios_screen.dart'; // 💡 Pantalla Nivel 2
+import 'package:servicejc/screens/servicios_screen.dart'; // Ahora esta pantalla muestra los PRODUCTOS
 
-// Widgets importados (se asume que ServicesGrid fue modificado para recibir List<CategoriaPrincipalModel>)
+// Widgets
 import 'package:servicejc/widgets/app_bar_content.dart';
 import 'package:servicejc/widgets/hero_banner.dart';
 import 'package:servicejc/widgets/promotions_section.dart';
@@ -18,16 +17,14 @@ import 'package:servicejc/widgets/services_grid.dart';
 import 'package:servicejc/widgets/testimonials_section.dart';
 import 'package:servicejc/widgets/app_footer_bar_content.dart';
 
-// Estilos centralizados
+// Estilos
 import '../theme/app_colors.dart';
 
-// 🔹 Define una GlobalKey accesible
 final GlobalKey servicesKey = GlobalKey();
 final GlobalKey promotionsKey = GlobalKey();
 
-// Definimos un tipo para manejar los futuros en paralelo
 class WelcomeScreenData {
-  // 💡 Carga Categorías Principales
+  // Seguimos usando este modelo porque el backend lo devuelve mapeado así
   final List<CategoriaPrincipalModel> categorias; 
   final bool isLoggedIn;
   WelcomeScreenData(this.categorias, this.isLoggedIn);
@@ -55,19 +52,21 @@ class _WelcomeClientScreenState extends State<WelcomeClientScreen> {
     final token = prefs.getString('authToken');
     final isLoggedIn = token != null && token.isNotEmpty;
     
-    // 💡 Llamada para obtener las categorías principales
+    // Llamada al backend (que ahora devuelve Servicios camuflados como Categorías)
     final categorias = await _servicioService.fetchCategoriasPrincipales(); 
     
     return WelcomeScreenData(categorias, isLoggedIn);
   }
   
-  // 💡 Lógica de navegación a la Pantalla 2
-  void _navigateToServicios(CategoriaPrincipalModel categoria) {
+  // 💡 CAMBIO CLAVE EN NAVEGACIÓN
+  // Al tocar un ítem del Home, vamos directo a ver sus PRODUCTOS
+  void _navigateToServicios(CategoriaPrincipalModel itemSeleccionado) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        // Navegamos al Nivel 2, pasando la categoría seleccionada
-        builder: (context) => ServiciosScreen(categoria: categoria),
+        // 'ServiciosScreen' ahora recibe este ítem como si fuera una "Categoría"
+        // Asegúrate de que ServiciosScreen use itemSeleccionado.id para buscar productos
+        builder: (context) => ServiciosScreen(categoria: itemSeleccionado),
       ),
     );
   }
@@ -123,7 +122,7 @@ class _WelcomeClientScreenState extends State<WelcomeClientScreen> {
           }
           
           if (snapshot.data == null || snapshot.data!.categorias.isEmpty) {
-             return const Center(child: Text('No se encontraron categorías principales.'));
+             return const Center(child: Text('No se encontraron servicios disponibles.'));
           }
 
           final categorias = snapshot.data!.categorias;
@@ -156,10 +155,10 @@ class _WelcomeClientScreenState extends State<WelcomeClientScreen> {
                         const PromoCarousel(),
                         const SizedBox(height: 32),
                         
-                        // 💡 ServicesGrid ahora muestra CategoriaPrincipalModel
+                        // GRID DE SERVICIOS
                         ServicesGrid( 
                           key: servicesKey,
-                          items: categorias, // List<CategoriaPrincipalModel>
+                          items: categorias, 
                           onItemSelected: _navigateToServicios, 
                           isLargeScreen: isLargeScreen,
                         ),

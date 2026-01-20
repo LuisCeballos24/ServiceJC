@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:servicejc/models/categoria_principal_model.dart';
-import 'package:servicejc/models/service_model.dart'; 
+import 'package:servicejc/models/categoria_principal_model.dart'; // Modelo que viene del Home
+import 'package:servicejc/models/product_model.dart'; // Modelo de los productos
 import 'package:servicejc/services/servicio_service.dart';
-// 💡 La siguiente pantalla es la que contiene la selección de productos/inspección
-import 'package:servicejc/screens/productos_screen.dart'; 
+// Importamos la pantalla siguiente: Selección de Ubicación
+import 'package:servicejc/screens/location_selection_screen.dart';
 
-// Asumimos que existen AppColors y AppTextStyles en lib/theme/
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 
 class ServiciosScreen extends StatefulWidget {
-  // Recibe la Categoría Principal seleccionada del Nivel 1
+  // Recibe el ítem seleccionado en el Home (que actúa como Servicio)
   final CategoriaPrincipalModel categoria; 
 
   const ServiciosScreen({super.key, required this.categoria});
@@ -20,87 +19,165 @@ class ServiciosScreen extends StatefulWidget {
 }
 
 class _ServiciosScreenState extends State<ServiciosScreen> {
-  late Future<List<ServiceModel>> _futureServicios;
+  late Future<List<ProductModel>> _futureProductos;
   final ServicioService _servicioService = ServicioService();
+  
+  // Mapa para controlar cantidades seleccionadas
+  final Map<ProductModel, int> _selectedProducts = {};
 
   @override
   void initState() {
     super.initState();
-    // 💡 Filtrar los servicios usando el ID de la Categoría Principal
-    _futureServicios = _servicioService.fetchServiciosByCategoriaId(widget.categoria.id);
+    // 💡 AHORA SÍ: Usamos el ID para buscar PRODUCTOS directamente
+    _futureProductos = _servicioService.fetchProductos(widget.categoria.id);
   }
 
-  void _navigateToProductos(ServiceModel servicio) {
-    // Navegación a la Pantalla 3 (ProductosScreen)
+  // Lógica de selección (igual que tenías en ProductosScreen)
+  void _updateQuantity(ProductModel product, int delta) {
+    setState(() {
+      int currentQty = _selectedProducts[product] ?? 0;
+      int newQty = currentQty + delta;
+      if (newQty > 0) {
+        _selectedProducts[product] = newQty;
+      } else {
+        _selectedProducts.remove(product);
+      }
+    });
+  }
+
+  void _continueToLocation() {
+    if (_selectedProducts.isEmpty) return;
+
+    double subtotal = 0;
+    _selectedProducts.forEach((p, qty) => subtotal += p.costo * qty);
+    
+    // Lógica de descuento simple (ejemplo)
+    double discount = subtotal > 100 ? subtotal * 0.10 : 0;
+    double total = subtotal - discount;
+
     Navigator.push(
       context,
       MaterialPageRoute(
-        // Pasa el Servicio (Ej: 'Electricidad') a la pantalla de actividades
-        builder: (context) => ProductosScreen(servicio: servicio), 
+        builder: (context) => LocationSelectionScreen(
+          selectedProducts: _selectedProducts,
+          subtotal: subtotal,
+          discountAmount: discount,
+          totalCost: total,
+        ),
       ),
     );
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        // Título de la Categoría Principal
         title: Text(
-          widget.categoria.nombre,
+          widget.categoria.nombre, // Nombre del servicio (ej: Electricidad)
           style: AppTextStyles.h2.copyWith(color: AppColors.accent),
-        ), 
+        ),
         backgroundColor: AppColors.primary,
         iconTheme: const IconThemeData(color: AppColors.accent),
-        titleTextStyle: AppTextStyles.h2.copyWith(color: AppColors.accent),
       ),
-      body: FutureBuilder<List<ServiceModel>>(
-        future: _futureServicios,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.accent));
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error al cargar servicios: ${snapshot.error}'));
-          }
-          if (snapshot.data == null || snapshot.data!.isEmpty) {
-            return Center(child: Text('No se encontraron servicios para ${widget.categoria.nombre}.'));
-          }
+      // Botón flotante para continuar si hay selección
+      floatingActionButton: _selectedProducts.isNotEmpty
+          ? FloatingActionButton.extended(
+              onPressed: _continueToLocation,
+              backgroundColor: AppColors.accent,
+              label: const Text("Continuar", style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+              icon: const Icon(Icons.arrow_forward, color: AppColors.primary),
+            )
+          : null,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppColors.primary, AppColors.secondary],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: FutureBuilder<List<ProductModel>>(
+          future: _futureProductos,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator(color: AppColors.accent));
+            }
+            if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.white)));
+            }
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return const Center(child: Text('No hay actividades disponibles para este servicio.', style: TextStyle(color: Colors.white70)));
+            }
 
-          final servicios = snapshot.data!;
+            final productos = snapshot.data!;
 
-          // Mostrar los Servicios (Electricidad, Plomería, Ebanistería, etc.) en un Grid
-          return GridView.builder(
-            padding: const EdgeInsets.all(16.0),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2, 
-              childAspectRatio: 1.5,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-            ),
-            itemCount: servicios.length,
-            itemBuilder: (context, index) {
-              final servicio = servicios[index];
-              return Card(
-                elevation: 4,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                child: InkWell(
-                  onTap: () => _navigateToProductos(servicio),
+            return ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: productos.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final producto = productos[index];
+                final quantity = _selectedProducts[producto] ?? 0;
+
+                return Card(
+                  color: AppColors.secondary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: quantity > 0 ? AppColors.accent : Colors.transparent,
+                      width: 1.5
+                    )
+                  ),
                   child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Center(
-                      child: Text(
-                        servicio.nombre, 
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.listTitle.copyWith(color: AppColors.cardTitle),
-                      ),
+                    padding: const EdgeInsets.all(12.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                producto.nombre,
+                                style: AppTextStyles.bodyText.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                "\$${producto.costo.toStringAsFixed(2)}",
+                                style: AppTextStyles.bodyText.copyWith(color: AppColors.accent),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Controles de cantidad
+                        Row(
+                          children: [
+                            if (quantity > 0)
+                              IconButton(
+                                icon: const Icon(Icons.remove_circle_outline, color: Colors.white70),
+                                onPressed: () => _updateQuantity(producto, -1),
+                              ),
+                            if (quantity > 0)
+                              Text(
+                                '$quantity',
+                                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                            IconButton(
+                              icon: Icon(
+                                Icons.add_circle, 
+                                color: quantity > 0 ? AppColors.accent : Colors.white54
+                              ),
+                              onPressed: () => _updateQuantity(producto, 1),
+                            ),
+                          ],
+                        )
+                      ],
                     ),
                   ),
-                ),
-              );
-            },
-          );
-        },
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

@@ -1,21 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:servicejc/models/service_model.dart';
-import 'package:servicejc/models/product_model.dart'; // 💡 Importante
+import 'package:servicejc/models/categoria_principal_model.dart'; // Modelo de Servicios (Home)
+import 'package:servicejc/models/product_model.dart';
 import 'package:servicejc/services/servicio_service.dart';
-import 'package:servicejc/screens/productos_screen.dart'; 
+import 'package:servicejc/screens/servicios_screen.dart'; // Pantalla de Productos
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 
 class UniversalSearchDelegate extends SearchDelegate {
   final ServicioService _servicioService = ServicioService();
   
-  // 💡 Si esto es NULL, buscamos SERVICIOS (Global).
-  // 💡 Si tiene un ID, buscamos PRODUCTOS dentro de ese servicio.
+  // Si esto es NULL, buscamos en la lista global de SERVICIOS (Home).
+  // Si tiene un ID, buscamos PRODUCTOS dentro de ese servicio específico.
   final String? serviceIdContext; 
 
   UniversalSearchDelegate({this.serviceIdContext});
 
-  // 1. Estilos (Tema oscuro/dorado)
   @override
   ThemeData appBarTheme(BuildContext context) {
     final theme = Theme.of(context);
@@ -34,7 +33,6 @@ class UniversalSearchDelegate extends SearchDelegate {
     );
   }
 
-  // 2. Botón limpiar
   @override
   List<Widget>? buildActions(BuildContext context) {
     return [
@@ -46,7 +44,6 @@ class UniversalSearchDelegate extends SearchDelegate {
     ];
   }
 
-  // 3. Botón atrás
   @override
   Widget? buildLeading(BuildContext context) {
     return IconButton(
@@ -58,82 +55,105 @@ class UniversalSearchDelegate extends SearchDelegate {
   @override
   Widget buildResults(BuildContext context) => buildSuggestions(context);
 
-  // 4. LÓGICA DE BÚSQUEDA
   @override
   Widget buildSuggestions(BuildContext context) {
-    if (query.isEmpty) return Container(color: Colors.grey[900]);
+    // Si no hay texto, mostramos fondo oscuro vacío
+    if (query.isEmpty) return Container(color: AppColors.secondary);
 
     return FutureBuilder<List<dynamic>>(
-      // 💡 LÓGICA DINÁMICA:
-      // Si tenemos un ID de servicio (estamos dentro de Electricidad), llamamos a fetchProductos.
-      // Si no (estamos en el Home), llamamos a fetchServicios.
+      // 💡 LÓGICA DINÁMICA ACTUALIZADA:
+      // 1. Si serviceIdContext tiene valor -> Buscamos PRODUCTOS dentro de ese servicio.
+      // 2. Si es NULL -> Buscamos en la lista global de SERVICIOS (fetchCategoriasPrincipales).
       future: serviceIdContext != null 
           ? _servicioService.fetchProductos(serviceIdContext!) 
-          : _servicioService.fetchServicios(),
+          : _servicioService.fetchCategoriasPrincipales(), // Esto ahora trae los Servicios
       
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: AppColors.accent));
+          return Container(
+            color: AppColors.secondary,
+            child: const Center(child: CircularProgressIndicator(color: AppColors.accent)),
+          );
         }
 
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return Center(child: Text('No hay resultados.', style: AppTextStyles.body));
+          return Container(
+            color: AppColors.secondary,
+            child: Center(
+              child: Text('No se encontraron resultados.', 
+                style: AppTextStyles.bodyText.copyWith(color: Colors.white54)),
+            ),
+          );
         }
 
-        // Filtramos la lista (sea de productos o servicios)
+        // Filtramos la lista localmente según lo que escribe el usuario
         final results = snapshot.data!.where((item) {
-          // Ambos modelos tienen la propiedad 'nombre', así que podemos hacer esto:
-          // (Si tus modelos no tienen 'nombre', tendrás que castear)
           String nombreItem = '';
-          if (item is ServiceModel) nombreItem = item.nombre;
-          if (item is ProductModel) nombreItem = item.nombre;
+          
+          if (item is CategoriaPrincipalModel) {
+            nombreItem = item.nombre;
+          } else if (item is ProductModel) {
+            nombreItem = item.nombre;
+          }
           
           return nombreItem.toLowerCase().contains(query.toLowerCase());
         }).toList();
 
         return Container(
-          color: Colors.grey[900],
+          color: AppColors.secondary, // Fondo oscuro
           child: ListView.separated(
             itemCount: results.length,
-            separatorBuilder: (_, __) => const Divider(color: Colors.white24),
+            separatorBuilder: (_, __) => const Divider(color: Colors.white10),
             itemBuilder: (context, index) {
               final item = results[index];
 
-              // 💡 RENDERIZADO CONDICIONAL
-              if (item is ServiceModel) {
-                // ES UN SERVICIO -> Navegar a sus productos
+              // --- CASO 1: Es un SERVICIO (Resultado de búsqueda global) ---
+              if (item is CategoriaPrincipalModel) {
                 return ListTile(
-                  leading: const Icon(Icons.folder_special, color: AppColors.accent),
+                  leading: const Icon(Icons.work_outline, color: AppColors.accent),
                   title: Text(item.nombre, style: const TextStyle(color: Colors.white)),
-                  subtitle: const Text("Servicio", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  subtitle: const Text("Servicio Disponible", style: TextStyle(color: Colors.grey)),
                   onTap: () {
+                    // Al tocar, vamos a la pantalla de productos de ese servicio
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ProductosScreen(servicio: item),
+                        builder: (context) => ServiciosScreen(categoria: item),
                       ),
                     );
                   },
                 );
-              } else if (item is ProductModel) {
-                // ES UN PRODUCTO -> Mostrar detalle
+              } 
+              
+              // --- CASO 2: Es un PRODUCTO (Resultado de búsqueda dentro de un servicio) ---
+              else if (item is ProductModel) {
                 return ListTile(
-                  leading: const Icon(Icons.shopping_bag, color: Colors.greenAccent),
+                  leading: const Icon(Icons.sell, color: Colors.greenAccent),
                   title: Text(item.nombre, style: const TextStyle(color: Colors.white)),
-                  subtitle: Text("\$${item.costo}", style: const TextStyle(color: AppColors.accent)),
+                  subtitle: Text("\$${item.costo.toStringAsFixed(2)}", 
+                      style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold)),
                   onTap: () {
-                    // Aquí podrías abrir un modal con el detalle del producto
+                    // Aquí podrías seleccionar el producto o mostrar detalle
+                    // Por ahora cerramos el buscador devolviendo el producto si fuera necesario
+                    // o mostramos un diálogo simple.
                     showDialog(
-                      context: context, 
+                      context: context,
                       builder: (_) => AlertDialog(
-                        title: Text(item.nombre),
-                        content: Text("Precio: \$${item.costo}\nDescripción: ..."),
-                        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cerrar"))],
-                      )
+                        backgroundColor: AppColors.secondary,
+                        title: Text(item.nombre, style: const TextStyle(color: AppColors.accent)),
+                        content: Text("Precio: \$${item.costo}", style: const TextStyle(color: Colors.white)),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context), 
+                            child: const Text("Cerrar")
+                          )
+                        ],
+                      ),
                     );
                   },
                 );
               }
+              
               return const SizedBox();
             },
           ),

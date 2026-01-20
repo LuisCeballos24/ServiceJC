@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:servicejc/models/appointment_model.dart';
 import 'package:servicejc/models/user_model.dart';
 import 'package:servicejc/models/user_address_model.dart';
 import 'package:servicejc/models/location_model.dart';
-import 'package:servicejc/models/service_model.dart';
+// 💡 CAMBIO: Usamos CategoriaPrincipalModel porque representa los Servicios ahora
+import 'package:servicejc/models/categoria_principal_model.dart'; 
 import 'package:servicejc/models/product_model.dart';
 import 'package:servicejc/services/auth_service.dart';
 import 'package:servicejc/services/location_service.dart';
@@ -13,7 +13,6 @@ import 'package:servicejc/services/user_api_service.dart';
 import 'package:servicejc/theme/app_colors.dart';
 import 'package:servicejc/theme/app_text_styles.dart';
 
-// Importaciones para el Mapa
 import 'package:servicejc/screens/map_picker_screen.dart'; 
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
@@ -54,18 +53,10 @@ class _AdminManagementScreenState extends State<AdminManagementScreen>
           controller: _tabController,
           indicatorColor: AppColors.accent,
           labelStyle: AppTextStyles.h3.copyWith(color: AppColors.accent),
-          unselectedLabelStyle: AppTextStyles.h3.copyWith(
-            color: AppColors.white54,
-          ),
+          unselectedLabelStyle: AppTextStyles.h3.copyWith(color: AppColors.white54),
           tabs: const [
-            Tab(
-              text: 'Crear Usuario/Técnico',
-              icon: Icon(Icons.person_add, color: AppColors.accent),
-            ),
-            Tab(
-              text: 'Crear Cita para Cliente',
-              icon: Icon(Icons.schedule_send, color: AppColors.accent),
-            ),
+            Tab(text: 'Crear Usuario/Técnico', icon: Icon(Icons.person_add, color: AppColors.accent)),
+            Tab(text: 'Crear Cita para Cliente', icon: Icon(Icons.schedule_send, color: AppColors.accent)),
           ],
         ),
       ),
@@ -88,7 +79,6 @@ class _AdminManagementScreenState extends State<AdminManagementScreen>
     );
   }
 }
-
 // =============================================================================
 // TAB 1: CREAR USUARIO (Lógica Refactorizada)
 // =============================================================================
@@ -458,23 +448,25 @@ class __BuildCreateAppointmentTabState extends State<_BuildCreateAppointmentTab>
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
   String? _selectedClientId;
-  ServiceModel? _selectedService;
+  
+  // 💡 CAMBIO: Ahora usamos CategoriaPrincipalModel (que son los Servicios)
+  CategoriaPrincipalModel? _selectedService; 
   ProductModel? _selectedProduct;
   double _costoTotal = 0.0;
 
-  Future<List<ServiceModel>>? _servicesFuture;
+  // 💡 CAMBIO: El futuro devuelve CategoriaPrincipalModel
+  Future<List<CategoriaPrincipalModel>>? _servicesFuture;
   Future<List<ProductModel>>? _productsFuture;
-  Future<List<UserModel>>? _clientsFuture; // Debería cargar clientes reales
+  Future<List<UserModel>>? _clientsFuture; 
 
   @override
   void initState() {
     super.initState();
-    _servicesFuture = _servicioService.fetchServicios();
-    // TODO: Implementar un método real en UserApiService para buscar clientes
+    // 💡 CAMBIO: Llamamos a fetchCategoriasPrincipales en lugar de fetchServicios
+    _servicesFuture = _servicioService.fetchCategoriasPrincipales();
     _clientsFuture = _fetchClients(); 
   }
 
-  // Simulación de carga de clientes (reemplazar con API real)
   Future<List<UserModel>> _fetchClients() async {
     await Future.delayed(const Duration(milliseconds: 500));
     return [
@@ -489,11 +481,13 @@ class __BuildCreateAppointmentTabState extends State<_BuildCreateAppointmentTab>
       super.dispose();
   }
 
-  void _updateProducts(ServiceModel? service) {
+  // 💡 CAMBIO: Recibe CategoriaPrincipalModel
+  void _updateProducts(CategoriaPrincipalModel? service) {
       setState(() {
-          _selectedService = service;
-          _selectedProduct = null;
-          _productsFuture = service != null ? _servicioService.fetchProductos(service.id) : null;
+        _selectedService = service;
+        _selectedProduct = null;
+        // fetchProductos usa el ID, que CategoriaPrincipalModel tiene, así que esto funciona
+        _productsFuture = service != null ? _servicioService.fetchProductos(service.id) : null;
       });
   }
 
@@ -515,7 +509,6 @@ class __BuildCreateAppointmentTabState extends State<_BuildCreateAppointmentTab>
           final dt = DateTime(_selectedDate!.year, _selectedDate!.month, _selectedDate!.day, _selectedTime!.hour, _selectedTime!.minute);
           
           try {
-            // Construcción del objeto para enviar
             final citaData = {
                 'usuarioId': _selectedClientId,
                 'serviciosSeleccionados': [_selectedProduct!.id],
@@ -541,7 +534,6 @@ class __BuildCreateAppointmentTabState extends State<_BuildCreateAppointmentTab>
       }
   }
 
-  // Helpers para Dropdowns e Inputs
   InputDecoration _inputDeco(String label) {
       return InputDecoration(
         labelText: label,
@@ -584,16 +576,17 @@ class __BuildCreateAppointmentTabState extends State<_BuildCreateAppointmentTab>
                     ),
                     const SizedBox(height: 16),
 
-                    // SERVICIO
-                    FutureBuilder<List<ServiceModel>>(
+                    // SERVICIO (CATEGORÍA)
+                    // 💡 CAMBIO: FutureBuilder de CategoriaPrincipalModel
+                    FutureBuilder<List<CategoriaPrincipalModel>>(
                         future: _servicesFuture,
                         builder: (context, snapshot) {
                             if(snapshot.connectionState == ConnectionState.waiting) return const LinearProgressIndicator();
-                             return DropdownButtonFormField<ServiceModel>(
+                             return DropdownButtonFormField<CategoriaPrincipalModel>(
                                 value: _selectedService,
                                 dropdownColor: AppColors.secondary,
                                 style: AppTextStyles.bodyText.copyWith(color: AppColors.white),
-                                decoration: _inputDeco('Categoría'),
+                                decoration: _inputDeco('Categoría / Servicio'),
                                 items: (snapshot.data ?? []).map((s) => DropdownMenuItem(value: s, child: Text(s.nombre))).toList(),
                                 onChanged: _updateProducts,
                             );
@@ -616,9 +609,9 @@ class __BuildCreateAppointmentTabState extends State<_BuildCreateAppointmentTab>
                             );
                         }
                     ),
+                    // ... Resto del formulario (Fecha, Hora, Botón) igual ...
                     const SizedBox(height: 24),
                     
-                    // FECHA
                     ElevatedButton.icon(
                         onPressed: () => _selectDateTime(context),
                         icon: const Icon(Icons.calendar_today, color: AppColors.primary),

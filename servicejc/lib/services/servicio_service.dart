@@ -1,19 +1,19 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:servicejc/models/service_model.dart'; // Modelo para los servicios (sub-categorías)
-import 'package:servicejc/models/product_model.dart'; // Modelo para los productos
-import 'package:servicejc/models/categoria_principal_model.dart'; // 💡 NUEVO MODELO para la Pantalla Principal
+import 'package:servicejc/models/product_model.dart';
+import 'package:servicejc/models/categoria_principal_model.dart'; 
 import 'package:servicejc/services/api_service.dart';
 
 class ServicioService extends ApiService {
   
   // ----------------------------------------------------
-  // 💡 NIVEL 1: Obtener las Categorías Principales (Nueva Pantalla Principal)
+  // NIVEL 1: PANTALLA PRINCIPAL (Home)
   // ----------------------------------------------------
   Future<List<CategoriaPrincipalModel>> fetchCategoriasPrincipales() async {
-    // Asume que el endpoint es /categorias_principales
+    // Llamamos a /servicios porque en tu Controller Java tienes @GetMapping("/servicios")
+    // que devuelve la lista base.
     final response = await http.get(
-      Uri.parse('$baseUrl/categorias_principales'), 
+      Uri.parse('$baseUrl/servicios'), 
       headers: getHeaders(),
     );
 
@@ -21,38 +21,21 @@ class ServicioService extends ApiService {
       List jsonResponse = jsonDecode(response.body);
       return jsonResponse.map((data) => CategoriaPrincipalModel.fromJson(data)).toList();
     } else {
-      throw Exception('Error al cargar las categorías principales: ${response.statusCode}');
+      throw Exception('Error al cargar servicios: ${response.statusCode}');
     }
   }
 
   // ----------------------------------------------------
-  // 💡 NIVEL 2: Obtener Servicios filtrados (Nueva Pantalla Secundaria)
-  // ESTE MÉTODO RESUELVE EL ERROR 'undefined_method'
+  // NIVEL 2: PRODUCTOS (Detalle del Servicio)
   // ----------------------------------------------------
-  Future<List<ServiceModel>> fetchServiciosByCategoriaId(String categoriaPrincipalId) async {
-    // Llama al endpoint que su backend usa para filtrar servicios por el ID de la Categoría Principal
-    // Ejemplo de endpoint: /servicios?categoriaPrincipalId=MANT_REP
-    final response = await http.get(
-      Uri.parse('$baseUrl/servicios?categoriaPrincipalId=$categoriaPrincipalId'),
-      headers: getHeaders(),
-    );
-
-    if (response.statusCode == 200) {
-      List jsonResponse = jsonDecode(response.body);
-      return jsonResponse.map((data) => ServiceModel.fromJson(data)).toList();
-    } else {
-      throw Exception('Error al cargar los sub-servicios: ${response.statusCode}');
-    }
-  }
-  
-  // ----------------------------------------------------
-  // Nivel 3: Obtener los Productos (Actividades/Inspección)
-  // ----------------------------------------------------
-  // Método para obtener la lista de productos de un servicio específico
   Future<List<ProductModel>> fetchProductos(String servicioId) async {
-    // Mantenemos la estructura de su endpoint original: /servicios/{id}/productos
+    
+    // 🔴 CORRECCIÓN CRÍTICA AQUÍ:
+    // Antes tenía: '$baseUrl/productos?servicioId=$servicioId' (ESTO ESTABA MAL)
+    // Ahora debe ser: '$baseUrl/servicios/$servicioId/productos' (ESTO COINCIDE CON TU JAVA)
+    
     final response = await http.get(
-      Uri.parse('$baseUrl/servicios/$servicioId/productos'),
+      Uri.parse('$baseUrl/servicios/$servicioId/productos'), 
       headers: getHeaders(),
     );
 
@@ -60,22 +43,7 @@ class ServicioService extends ApiService {
       List jsonResponse = jsonDecode(response.body);
       return jsonResponse.map((data) => ProductModel.fromJson(data)).toList();
     } else {
-      throw Exception('Error al cargar los productos: ${response.statusCode}');
-    }
-  }
-
-  // Mantenemos el método antiguo por si aún es referenciado en la app
-  Future<List<ServiceModel>> fetchServicios() async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/servicios'),
-      headers: getHeaders(),
-    );
-
-    if (response.statusCode == 200) {
-      List jsonResponse = jsonDecode(response.body);
-      return jsonResponse.map((data) => ServiceModel.fromJson(data)).toList();
-    } else {
-      throw Exception('Error al cargar los servicios (antiguo): ${response.statusCode}');
+      throw Exception('Error al cargar productos: ${response.statusCode} - ${response.body}');
     }
   }
 }

@@ -2,7 +2,7 @@ package com.backend.servicejc.service;
 
 import com.backend.servicejc.model.Producto;
 import com.backend.servicejc.model.Servicio;
-import com.backend.servicejc.model.CategoriaPrincipalModel;
+import com.backend.servicejc.model.CategoriaPrincipalModel; // Puede mantenerse o eliminarse si cambias el modelo
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.Firestore;
@@ -30,12 +30,14 @@ public class ServicioService {
 
     // --- MÉTODOS DE LECTURA (GET) ---
 
+    // Este método devuelve todos los servicios (Nivel 1)
     public List<Servicio> getAllCategorias() throws ExecutionException, InterruptedException {
         ApiFuture<QuerySnapshot> future = firestore.collection("servicios").get();
         List<QueryDocumentSnapshot> documents = future.get().getDocuments();
         return documents.stream().map(doc -> doc.toObject(Servicio.class)).collect(Collectors.toList());
     }
 
+    // Este método devuelve los productos de un servicio (Nivel 2)
     public List<Producto> getProductosByServicioId(String servicioId) throws ExecutionException, InterruptedException {
         ApiFuture<QuerySnapshot> future = firestore.collection("productos")
                 .whereEqualTo("servicioId", servicioId)
@@ -44,19 +46,28 @@ public class ServicioService {
         return documents.stream().map(doc -> doc.toObject(Producto.class)).collect(Collectors.toList());
     }
 
-    // Obtiene la lista para la PANTALLA PRINCIPAL
+    // 💡 MODIFICADO: Ahora este método (usado por tu Home) trae los 'servicios' directamente.
+    // Esto evita que tengas que cambiar tu Frontend 'WelcomeClientScreen'.
     public List<CategoriaPrincipalModel> fetchCategoriasPrincipales() throws ExecutionException, InterruptedException {
-        ApiFuture<QuerySnapshot> future = firestore.collection("categorias_principales").get();
+        ApiFuture<QuerySnapshot> future = firestore.collection("servicios").get();
         List<QueryDocumentSnapshot> documents = future.get().getDocuments();
-        return documents.stream().map(doc -> doc.toObject(CategoriaPrincipalModel.class)).collect(Collectors.toList());
+        
+        return documents.stream().map(doc -> {
+            Servicio serv = doc.toObject(Servicio.class);
+            
+            // 🔴 CORRECCIÓN: Usamos el constructor de 2 argumentos (ID y Nombre)
+            return new CategoriaPrincipalModel(serv.getId(), serv.getNombre()); 
+            
+        }).collect(Collectors.toList());
     }
 
+    // Este método ya no es necesario si eliminamos el nivel intermedio, pero lo dejamos por seguridad
+    // apuntando también a servicios por si acaso.
     public List<Servicio> fetchServiciosByCategoriaId(String categoriaPrincipalId) throws ExecutionException, InterruptedException {
-        ApiFuture<QuerySnapshot> future = firestore.collection("servicios")
-                .whereEqualTo("categoriaPrincipalId", categoriaPrincipalId)
-                .get();
-        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
-        return documents.stream().map(doc -> doc.toObject(Servicio.class)).collect(Collectors.toList());
+        // En la lógica plana, el ID ya es el del servicio, así que devolvemos una lista con ese único servicio
+        // O simplemente retornamos todos si la lógica anterior no aplica.
+        // Para evitar errores, devolvemos vacío o buscamos por ID directo.
+        return new ArrayList<>(); 
     }
 
     public List<Producto> getProductosByIds(List<String> productoIds) throws ExecutionException, InterruptedException {
@@ -72,8 +83,7 @@ public class ServicioService {
                 .filter(p -> p != null).collect(Collectors.toList());
     }
 
-    // --- 🟢 NUEVA LISTA DE LA PANTALLA PRINCIPAL ---
-    // Esta lista define lo que se verá en el 'Home'.
+    // --- LISTA DEFINITIVA PARA PANTALLA PRINCIPAL (SERVICIOS) ---
     private final List<String> LISTA_PANTALLA_PRINCIPAL = List.of(
         "Aire Acondicionado (Instalación y Mantenimiento)",
         "Trabajos de Repello Bofo de Edificios",
@@ -107,47 +117,36 @@ public class ServicioService {
         "Cielo raso"
     );
 
-    // --- MÉTODO DE POBLAMIENTO (SEED) ---
+    // --- MÉTODO DE POBLAMIENTO PLANO (SEED) ---
     public void seedCategoriasYProductos() throws ExecutionException, InterruptedException {
-        // Verificar si ya existen datos para no duplicar
-        ApiFuture<QuerySnapshot> check = firestore.collection("categorias_principales").get();
+        // Verificar si 'servicios' ya tiene datos
+        ApiFuture<QuerySnapshot> check = firestore.collection("servicios").get();
         if (!check.get().isEmpty()) {
-            System.out.println("⚠️ La base de datos ya tiene datos. No se realizará la inserción.");
+            System.out.println("⚠️ La colección 'servicios' ya tiene datos. No se realizará la inserción.");
             return;
         }
 
-        System.out.println("🚀 Iniciando población de la nueva lista principal...");
+        System.out.println("🚀 Iniciando población plana (Servicios -> Productos)...");
 
-        // Mapa para guardar los IDs generados de los servicios y poder asignarles productos
         Map<String, String> mapaServiciosIds = new HashMap<>();
 
-        // 1. Crear Categorías Principales y Servicios Automáticos
+        // 1. Crear SERVICIOS directamente (Sin Categorías padres)
         for (String nombreItem : LISTA_PANTALLA_PRINCIPAL) {
-            
-            // A. Insertar en 'categorias_principales' (Para que salga en el Home)
-            Map<String, Object> categoria = new HashMap<>();
-            categoria.put("nombre", nombreItem); 
-            // Usamos un ID generado automáticamente por Firestore
-            ApiFuture<DocumentReference> catRef = firestore.collection("categorias_principales").add(categoria);
-            String categoriaId = catRef.get().getId();
-
-            // B. Crear un Servicio espejo vinculado a esa categoría (Para mantener la lógica de navegación)
             Map<String, Object> servicio = new HashMap<>();
-            servicio.put("nombre", nombreItem); // El servicio se llama igual
-            servicio.put("categoriaPrincipalId", categoriaId); // Enlace
+            servicio.put("nombre", nombreItem);
+            // No asignamos 'categoriaPrincipalId' porque ya no existe ese nivel
             
             ApiFuture<DocumentReference> servRef = firestore.collection("servicios").add(servicio);
             String servicioId = servRef.get().getId();
 
-            // Guardamos el ID en el mapa usando el nombre como clave para buscarlo abajo
             mapaServiciosIds.put(nombreItem, servicioId);
         }
 
-        // 2. Crear Productos y asignarlos a los IDs generados
+        // 2. Crear Productos y asignarlos a los IDs de los servicios creados
         List<Producto> productos = new ArrayList<>();
         final Double COSTO_INSPECCION = 10.00;
 
-        // --- ASIGNACIÓN DE PRODUCTOS A LA NUEVA LISTA ---
+        // --- ASIGNACIÓN DE PRODUCTOS ---
 
         String idAire = mapaServiciosIds.get("Aire Acondicionado (Instalación y Mantenimiento)");
         if (idAire != null) {
@@ -333,6 +332,6 @@ public class ServicioService {
             firestore.collection("productos").add(p);
         }
 
-        System.out.println("✅ Base de datos poblada con la nueva lista de Pantalla Principal.");
+        System.out.println("✅ Base de datos poblada con estructura plana (Servicios -> Productos).");
     }
 }
