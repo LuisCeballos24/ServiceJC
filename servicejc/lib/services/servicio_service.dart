@@ -10,11 +10,13 @@ class ServicioService extends ApiService {
   // NIVEL 1: PANTALLA PRINCIPAL (Home)
   // ----------------------------------------------------
   Future<List<CategoriaPrincipalModel>> fetchCategoriasPrincipales() async {
-    // Llamamos a /servicios porque en tu Controller Java tienes @GetMapping("/servicios")
-    // que devuelve la lista base.
+    
+    // ✅ CORRECCIÓN 1: Esperamos los headers
+    final headers = await getHeaders();
+
     final response = await http.get(
       Uri.parse('$baseUrl/servicios'), 
-      headers: getHeaders(),
+      headers: headers, // Pasamos la variable ya lista
     );
 
     if (response.statusCode == 200) {
@@ -30,13 +32,13 @@ class ServicioService extends ApiService {
   // ----------------------------------------------------
   Future<List<ProductModel>> fetchProductos(String servicioId) async {
     
-    // 🔴 CORRECCIÓN CRÍTICA AQUÍ:
-    // Antes tenía: '$baseUrl/productos?servicioId=$servicioId' (ESTO ESTABA MAL)
-    // Ahora debe ser: '$baseUrl/servicios/$servicioId/productos' (ESTO COINCIDE CON TU JAVA)
-    
+    // ✅ CORRECCIÓN 2: Esperamos los headers
+    final headers = await getHeaders();
+
+    // Nota: Tu URL corregida está perfecta aquí abajo
     final response = await http.get(
       Uri.parse('$baseUrl/servicios/$servicioId/productos'), 
-      headers: getHeaders(),
+      headers: headers, // Pasamos la variable ya lista
     );
 
     if (response.statusCode == 200) {

@@ -3,18 +3,13 @@ package com.backend.servicejc.service;
 import com.backend.servicejc.model.Cita;
 import com.backend.servicejc.model.Producto;
 import com.google.api.core.ApiFuture;
-import com.google.cloud.firestore.CollectionReference;
-import com.google.cloud.firestore.DocumentReference;
-import com.google.cloud.firestore.DocumentSnapshot; // Importación necesaria
-import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.QueryDocumentSnapshot;
-import com.google.cloud.firestore.QuerySnapshot;
+import com.google.cloud.firestore.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
@@ -22,25 +17,38 @@ import java.util.concurrent.ExecutionException;
 public class CitaService {
 
     private final Firestore firestore;
-    private final ServicioService servicioService; // Inyectar ServicioService
+    private final ServicioService servicioService;
     private final String COLLECTION_NAME = "citas";
 
     @Autowired
-    // Añadir inyección de ServicioService
-    public CitaService(Firestore firestore, ServicioService servicioService) { 
+    public CitaService(Firestore firestore, ServicioService servicioService) {
         this.firestore = firestore;
-        this.servicioService = servicioService; 
+        this.servicioService = servicioService;
     }
 
-    // Método para crear una nueva cita
-    public void createCita(Cita cita) throws ExecutionException, InterruptedException {
+    // =========================================================================
+    // 1. CREAR CITA 
+    // =========================================================================
+    public String createCita(Cita cita) throws ExecutionException, InterruptedException {
         DocumentReference docRef = firestore.collection(COLLECTION_NAME).document();
-        cita.setId(docRef.getId());
-        ApiFuture<com.google.cloud.firestore.WriteResult> result = docRef.set(cita);
-        result.get();
+        
+        String generatedId = docRef.getId();
+        cita.setId(generatedId);
+
+        // ✅ CORRECCIÓN 1: Usamos getEstado() y setEstado() en lugar de status
+        if (cita.getEstado() == null) {
+            cita.setEstado("PENDIENTE_PAGO");
+        }
+
+        ApiFuture<WriteResult> result = docRef.set(cita);
+        result.get(); 
+
+        return generatedId;
     }
 
-    // Método para obtener las citas de un usuario específico
+    // =========================================================================
+    // 2. OBTENER POR USUARIO 
+    // =========================================================================
     public List<Cita> getCitasByUsuarioId(String usuarioId) throws ExecutionException, InterruptedException {
         ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME)
                 .whereEqualTo("usuarioId", usuarioId)
@@ -48,103 +56,105 @@ public class CitaService {
 
         List<QueryDocumentSnapshot> documents = future.get().getDocuments();
         List<Cita> citas = new ArrayList<>();
+
         for (QueryDocumentSnapshot document : documents) {
-            citas.add(document.toObject(Cita.class));
+            Cita cita = document.toObject(Cita.class);
+            enrichCitaWithProducts(cita);
+            citas.add(cita);
         }
         return citas;
     }
 
-     public List<Cita> getCitasByTecnicoId(String tecnicoId) throws Exception {
+    // =========================================================================
+    // 3. OBTENER POR TÉCNICO 
+    // =========================================================================
+    public List<Cita> getCitasByTecnicoId(String tecnicoId) throws ExecutionException, InterruptedException {
         ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME)
                 .whereEqualTo("tecnicoId", tecnicoId)
                 .get();
 
-        QuerySnapshot querySnapshot = future.get();
-        List<Cita> listaCitasEnriquecidas = new ArrayList<>(); 
+        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+        List<Cita> citas = new ArrayList<>();
 
-        if (!querySnapshot.isEmpty()) {
-            for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
-                Cita cita = doc.toObject(Cita.class);
-                
-                // 1. Obtener los productos (Servicios)
-                List<Producto> productos = servicioService.getProductosByIds(cita.getServiciosSeleccionados());
-                
-                // 2. ENRIQUECER con la lista de productos
-                cita.setProductosSeleccionados(productos);
-                
-                listaCitasEnriquecidas.add(cita);
-            }
+        for (QueryDocumentSnapshot document : documents) {
+            Cita cita = document.toObject(Cita.class);
+            enrichCitaWithProducts(cita);
+            citas.add(cita);
         }
-        return listaCitasEnriquecidas; 
+        return citas;
     }
 
-    // MÉTODO MODIFICADO: Ahora devuelve DTOs enriquecidos
-   public List<Cita> getAllCitas() throws Exception {
-    CollectionReference citas = firestore.collection(COLLECTION_NAME);
-    QuerySnapshot querySnapshot = citas.get().get();
-    List<Cita> listaCitasEnriquecidas = new ArrayList<>(); 
+    // =========================================================================
+    // 4. OBTENER TODAS 
+    // =========================================================================
+    public List<Cita> getAllCitas() throws ExecutionException, InterruptedException {
+        ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME).get();
+        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+        List<Cita> citas = new ArrayList<>();
 
-    if (!querySnapshot.isEmpty()) {
-        for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+        for (QueryDocumentSnapshot document : documents) {
+            Cita cita = document.toObject(Cita.class);
+            enrichCitaWithProducts(cita);
+            citas.add(cita);
+        }
+        return citas;
+    }
+
+    // =========================================================================
+    // 5. OBTENER POR ID 
+    // =========================================================================
+    public Cita getCitaById(String id) throws ExecutionException, InterruptedException {
+        DocumentSnapshot doc = firestore.collection(COLLECTION_NAME).document(id).get().get();
+        if (doc.exists()) {
             Cita cita = doc.toObject(Cita.class);
-            
-            // DEBUG: Verificar los IDs
-            System.out.println("IDs de servicios: " + cita.getServiciosSeleccionados());
-            
-            // 1. Obtener los productos
-            List<Producto> productos = servicioService.getProductosByIds(cita.getServiciosSeleccionados());
-            
-            // DEBUG: Verificar los productos obtenidos
-            System.out.println("Productos obtenidos: " + productos.size());
-            productos.forEach(p -> System.out.println("  - " + p.getId() + ": " + p.getNombre()));
-
-            // 2. ENRIQUECER
-            cita.setProductosSeleccionados(productos);
-            
-            // DEBUG: Verificar que se asignaron
-            System.out.println("Productos en cita: " + cita.getProductosSeleccionados().size());
-
-            listaCitasEnriquecidas.add(cita); 
+            if (cita != null) {
+                cita.setId(doc.getId());
+                enrichCitaWithProducts(cita);
+            }
+            return cita;
         }
+        return null;
     }
-    return listaCitasEnriquecidas; 
-    }
-    
-    // MÉTODO: Lógica para actualizar una Cita
+
+    // =========================================================================
+    // 6. ACTUALIZAR CITA
+    // =========================================================================
     public Cita updateCita(String id, Cita citaDetails) throws ExecutionException, InterruptedException {
         DocumentReference docRef = firestore.collection(COLLECTION_NAME).document(id);
-        
-        // 1. Verificar existencia
-        DocumentSnapshot snapshot = docRef.get().get();
-        if (!snapshot.exists()) {
-            throw new RuntimeException("Cita no encontrada con ID: " + id);
+
+        if (!docRef.get().get().exists()) {
+            throw new RuntimeException("Cita no encontrada");
         }
 
-        // 2. CREAR MAPA DE ACTUALIZACIÓN CON SÓLO LOS CAMPOS PERMITIDOS
         Map<String, Object> updates = new HashMap<>();
+        
+        // ✅ CORRECCIÓN 2: Eliminamos getStatus(), getFecha() y getHora()
+        // y usamos los métodos reales de tu modelo: getEstado() y getFechaHora()
+        if (citaDetails.getEstado() != null) updates.put("estado", citaDetails.getEstado());
+        if (citaDetails.getTecnicoId() != null) updates.put("tecnicoId", citaDetails.getTecnicoId());
+        if (citaDetails.getFechaHora() != null) updates.put("fechaHora", citaDetails.getFechaHora());
+        if (citaDetails.getDescripcion() != null) updates.put("descripcion", citaDetails.getDescripcion());
+        if (citaDetails.getImageUrl() != null) updates.put("imageUrl", citaDetails.getImageUrl());
 
-        // Actualizar estado (siempre se debe enviar para evitar fallos de lógica)
-        if (citaDetails.getEstado() != null) {
-            updates.put("estado", citaDetails.getEstado());
-        }
-        
-        // Actualizar tecnicoId (Puede ser null si se asigna "Sin Asignar". Se permite el envío de null)
-        // CRÍTICO: No hay que incluir campos como serviciosSeleccionados, fechaHora, etc.
-        updates.put("tecnicoId", citaDetails.getTecnicoId()); 
-    
-        if (citaDetails.getFechaHora() != null) {
-            updates.put("fechaHora", citaDetails.getFechaHora()); // <--- ¡ACTUALIZACIÓN AGREGADA!
-        }
-        
-        // 3. Ejecutar la actualización parcial (Solo los campos en el mapa 'updates' se modifican)
         if (!updates.isEmpty()) {
-             docRef.update(updates).get();
-        } else {
-             throw new RuntimeException("No se proporcionaron campos válidos para actualizar la cita (Estado/Técnico).");
+            docRef.update(updates).get();
         }
-        
-        // 4. Obtener y devolver la Cita completa actualizada (con los campos originales)
-        DocumentSnapshot updatedSnapshot = docRef.get().get();
-        return updatedSnapshot.toObject(Cita.class);
+
+        return getCitaById(id);
+    }
+
+    // =========================================================================
+    // MÉTODO AUXILIAR PRIVADO 
+    // =========================================================================
+    private void enrichCitaWithProducts(Cita cita) {
+        try {
+            if (cita.getServiciosSeleccionados() != null && !cita.getServiciosSeleccionados().isEmpty()) {
+                List<Producto> productos = servicioService.getProductosByIds(cita.getServiciosSeleccionados());
+                cita.setProductosSeleccionados(productos);
+            }
+        } catch (Exception e) {
+            System.err.println("Error enriqueciendo cita " + cita.getId() + ": " + e.getMessage());
+            cita.setProductosSeleccionados(new ArrayList<>());
+        }
     }
 }

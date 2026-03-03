@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:servicejc/models/categoria_principal_model.dart';
-// Importamos ServiceModel si lo necesitas, pero aquí nos basamos en CategoriaPrincipalModel
 import 'package:servicejc/services/servicio_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Pantallas
 import 'package:servicejc/screens/my_account_screen.dart';
-import 'package:servicejc/screens/servicios_screen.dart'; // Ahora esta pantalla muestra los PRODUCTOS
+import 'package:servicejc/screens/servicios_screen.dart'; 
+import 'package:servicejc/screens/login_screen.dart'; // ⚠️ Asegúrate de importar tu pantalla de Login
 
 // Widgets
 import 'package:servicejc/widgets/app_bar_content.dart';
@@ -20,12 +20,9 @@ import 'package:servicejc/widgets/app_footer_bar_content.dart';
 // Estilos
 import '../theme/app_colors.dart';
 
-final GlobalKey servicesKey = GlobalKey();
-final GlobalKey promotionsKey = GlobalKey();
-
+// ✅ CLASE DE DATOS
 class WelcomeScreenData {
-  // Seguimos usando este modelo porque el backend lo devuelve mapeado así
-  final List<CategoriaPrincipalModel> categorias; 
+  final List<CategoriaPrincipalModel> categorias;
   final bool isLoggedIn;
   WelcomeScreenData(this.categorias, this.isLoggedIn);
 }
@@ -40,32 +37,56 @@ class WelcomeClientScreen extends StatefulWidget {
 class _WelcomeClientScreenState extends State<WelcomeClientScreen> {
   late Future<WelcomeScreenData> _futureData;
   final ServicioService _servicioService = ServicioService();
+  
+  final GlobalKey servicesKey = GlobalKey();
+  final GlobalKey promotionsKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
+    // 🔥 Carga los datos sin importar si hay login o no
     _futureData = _loadAllData();
   }
 
   Future<WelcomeScreenData> _loadAllData() async {
+    // 1. Verificamos el token silenciosamente
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('authToken');
+    
+    // Si hay token, es true. Si es null, es false.
     final isLoggedIn = token != null && token.isNotEmpty;
     
-    // Llamada al backend (que ahora devuelve Servicios camuflados como Categorías)
+    // 2. Descargamos Servicios (El backend debe permitir esto sin token)
     final categorias = await _servicioService.fetchCategoriasPrincipales(); 
     
     return WelcomeScreenData(categorias, isLoggedIn);
   }
   
-  // 💡 CAMBIO CLAVE EN NAVEGACIÓN
-  // Al tocar un ítem del Home, vamos directo a ver sus PRODUCTOS
+  // Lógica inteligente para el botón de perfil
+  void _handleProfileClick() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('authToken');
+
+    if (token != null && token.isNotEmpty) {
+      // ✅ Si TIENE token, va a Mi Cuenta
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const MyAccountScreen()),
+      );
+    } else {
+      // 👤 Si NO tiene token, lo mandamos al Login
+      print("Usuario invitado: Redirigiendo a Login...");
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()), // Asegúrate que LoginScreen existe
+      );
+    }
+  }
+
   void _navigateToServicios(CategoriaPrincipalModel itemSeleccionado) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        // 'ServiciosScreen' ahora recibe este ítem como si fuera una "Categoría"
-        // Asegúrate de que ServiciosScreen use itemSeleccionado.id para buscar productos
         builder: (context) => ServiciosScreen(categoria: itemSeleccionado),
       ),
     );
@@ -83,16 +104,10 @@ class _WelcomeClientScreenState extends State<WelcomeClientScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
+          // 👇 BOTÓN INTELIGENTE DE PERFIL
           IconButton(
             icon: const Icon(Icons.person, color: AppColors.white),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MyAccountScreen(),
-                ),
-              );
-            },
+            onPressed: _handleProfileClick, // Usamos la nueva función
           ),
         ],
       ),
@@ -109,22 +124,34 @@ class _WelcomeClientScreenState extends State<WelcomeClientScreen> {
                   end: Alignment.bottomCenter,
                 ),
               ),
-              child: const Center(
-                child: CircularProgressIndicator(color: AppColors.accent),
-              ),
+              child: const Center(child: CircularProgressIndicator(color: AppColors.accent)),
             );
           }
 
           if (snapshot.hasError) {
-            return Center(
-              child: Text('Error al cargar datos: ${snapshot.error}'),
+            // Manejo elegante de errores (por si el backend falla)
+            return Container(
+               color: AppColors.primary,
+               child: Center(
+                 child: Column(
+                   mainAxisAlignment: MainAxisAlignment.center,
+                   children: [
+                     const Icon(Icons.error_outline, color: Colors.white, size: 48),
+                     const SizedBox(height: 10),
+                     Text('Error de conexión: ${snapshot.error}', style: const TextStyle(color: Colors.white)),
+                     ElevatedButton(onPressed: () => setState(() => _futureData = _loadAllData()), child: const Text("Reintentar"))
+                   ],
+                 ),
+               ),
             );
           }
           
+          // Si carga vacío (raro, pero posible)
           if (snapshot.data == null || snapshot.data!.categorias.isEmpty) {
-             return const Center(child: Text('No se encontraron servicios disponibles.'));
+             return const Center(child: Text('No hay servicios disponibles.'));
           }
 
+          // ✅ DATOS LISTOS
           final categorias = snapshot.data!.categorias;
 
           return Stack(
@@ -143,19 +170,26 @@ class _WelcomeClientScreenState extends State<WelcomeClientScreen> {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         HeroBanner(
                           servicesKey: servicesKey,
                           promotionsKey: promotionsKey,
                         ),
                         const SizedBox(height: 32),
-                        PromotionsSection(key: promotionsKey),
-                        const SizedBox(height: 32),
-                        const PromoCarousel(),
+                        
+                        PromotionsSection(
+                          key: promotionsKey, 
+                          servicios: categorias 
+                        ),
+                        
                         const SizedBox(height: 32),
                         
-                        // GRID DE SERVICIOS
+                        PromoCarousel(
+                          servicios: categorias 
+                        ),
+                        
+                        const SizedBox(height: 32),
+                        
                         ServicesGrid( 
                           key: servicesKey,
                           items: categorias, 
@@ -164,6 +198,7 @@ class _WelcomeClientScreenState extends State<WelcomeClientScreen> {
                         ),
                         
                         const SizedBox(height: 32),
+                        // Sección de Testimonios (con carga inteligente propia)
                         const TestimonialsSection(),
                         const SizedBox(height: 32),
                         const AppFooterBarContent(),

@@ -15,24 +15,32 @@ class MyAccountScreen extends StatefulWidget {
 
 class _MyAccountScreenState extends State<MyAccountScreen> {
   String? _userRole;
+  String? _userId; // Necesitamos esto para el técnico
 
   @override
   void initState() {
     super.initState();
-    _loadUserRole();
+    _loadUserData();
   }
 
-  Future<void> _loadUserRole() async {
+  Future<void> _loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
+    final role = prefs.getString('userRole');
+    final id = prefs.getString('userId');
+
+    print("🔍 DEBUG CUENTA: Rol cargado: '$role', ID: '$id'");
+
     setState(() {
-      _userRole = prefs.getString('userRole');
+      _userRole = role;
+      _userId = id;
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    // 1. Estado de Carga (Si aún no lee las preferencias)
     if (_userRole == null) {
-      return Scaffold(
+      return const Scaffold(
         body: Center(child: CircularProgressIndicator(color: AppColors.accent)),
       );
     }
@@ -58,7 +66,10 @@ class _MyAccountScreenState extends State<MyAccountScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (_userRole == 'ADMINISTRATIVO')
+              // ---------------------------------------------------------
+              // TARJETA DE ADMINISTRADOR
+              // ---------------------------------------------------------
+              if (_userRole == 'ADMINISTRATIVO' || _userRole == 'admin')
                 _buildOptionCard(
                   context,
                   title: 'Panel de Administración',
@@ -67,27 +78,41 @@ class _MyAccountScreenState extends State<MyAccountScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => AdminDashboardScreen(),
-                      ),
+                          builder: (context) => AdminDashboardScreen()),
                     );
                   },
                 ),
-              if (_userRole == 'TECNICO')
+
+              // ---------------------------------------------------------
+              // TARJETA DE TÉCNICO
+              // ---------------------------------------------------------
+              if (_userRole == 'TECNICO' || _userRole == 'tecnico')
                 _buildOptionCard(
                   context,
                   title: 'Panel de Técnico',
                   icon: Icons.engineering,
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            const TechnicianPanelScreen(technicianId: 'userId'),
-                      ),
-                    );
+                    // Corrección: Usamos el ID real, no el texto 'userId'
+                    if (_userId != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              TechnicianPanelScreen(technicianId: _userId!),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Error: ID no encontrado")));
+                    }
                   },
                 ),
-              if (_userRole == 'USUARIO_FINAL')
+
+              // ---------------------------------------------------------
+              // TARJETA DE USUARIO (CLIENTE)
+              // ---------------------------------------------------------
+              // Aceptamos 'USUARIO_FINAL' O 'user' (lo que manda el backend)
+              if (_userRole == 'USUARIO_FINAL' || _userRole == 'user')
                 _buildOptionCard(
                   context,
                   title: 'Mis Citas Activas',
@@ -100,6 +125,22 @@ class _MyAccountScreenState extends State<MyAccountScreen> {
                       ),
                     );
                   },
+                ),
+
+              // ---------------------------------------------------------
+              // DEBUG: MENSAJE SI NO COINCIDE NINGÚN ROL
+              // ---------------------------------------------------------
+              if (!['ADMINISTRATIVO', 'admin', 'TECNICO', 'tecnico', 'USUARIO_FINAL', 'user']
+                  .contains(_userRole))
+                Card(
+                  color: Colors.red.withOpacity(0.8),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      "Error: Rol desconocido '$_userRole'.\nRevisa el backend.",
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
                 ),
             ],
           ),

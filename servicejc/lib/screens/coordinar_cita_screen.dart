@@ -10,7 +10,9 @@ import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:servicejc/services/appointment_service.dart';
 import 'package:servicejc/models/cita_model.dart';
-import 'package:intl/intl.dart';
+
+// ✅ AGREGADO: Importamos la pantalla de selección de pago
+import 'package:servicejc/screens/payment_method_screen.dart';
 
 class CoordinarCitaScreen extends StatefulWidget {
   final Map<ProductModel, int> selectedProducts;
@@ -60,9 +62,9 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
   // 3. NUEVA LÓGICA PRINCIPAL DEL BOTÓN
   void _handleContinue() async {
     // A. Validar Formulario primero
-    if (!_formKey.currentState!.validate() || 
-        _selectedDate == null || 
-        _selectedTime == null || 
+    if (!_formKey.currentState!.validate() ||
+        _selectedDate == null ||
+        _selectedTime == null ||
         _descriptionController.text.trim().length < 10) {
       
       ScaffoldMessenger.of(context).showSnackBar(
@@ -96,8 +98,6 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
         await Navigator.pushNamed(context, '/login');
         
         // Al volver, verificamos de nuevo (Recursividad simple)
-        // El usuario tendrá que volver a dar click en "Confirmar", 
-        // pero sus datos del formulario seguirán aquí.
       }
       return;
     }
@@ -193,10 +193,6 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
       if (_selectedPhotos.isNotEmpty && !kIsWeb) {
          photoFile = File(_selectedPhotos.first.path);
       }
-      // Nota: Si es Web, el servicio debe manejar bytes, 
-      // pero asumo que tu servicio actual usa File (dart:io). 
-      // Si usas web, el upload de fotos requiere ajustes en el servicio.
-      // Por ahora, esto arregla el crash en móvil y visualización.
 
       final List<String> serviciosSeleccionadosIds = widget
           .selectedProducts
@@ -208,7 +204,8 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
         id: '',
         userId: userId,
         tecnicoId: null,
-        status: 'PENDIENTE',
+        // ✅ CAMBIO: Estado inicial PENDIENTE_PAGO para habilitar flujo de cobro
+        status: 'PENDIENTE_PAGO',
         costoTotal: widget.totalCost,
         descripcion: _descriptionController.text.trim(),
         fecha: _selectedDate!,
@@ -217,17 +214,24 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
         imageUrl: null,
       );
 
-      // Enviar
-      await _appointmentService.createCita(cita, photoFile: photoFile);
+      // Enviar y capturar respuesta (El ID)
+      // Nota: Si tu servicio aún devuelve void, dará error aquí. Asegúrate que AppointmentService devuelva String.
+      // Usamos 'var' para que capture lo que sea que devuelva tu servicio
+      var resultado = await _appointmentService.createCita(cita, photoFile: photoFile);
+      String newCitaId = resultado.toString(); 
 
       if (mounted) {
-        // Limpiar toda la pila y volver al home o pantalla de éxito
-        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+        // Cerrar loading
+        Navigator.pop(context); 
         
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('¡Cita programada con éxito!'),
-            backgroundColor: AppColors.success,
+        // ✅ CAMBIO: En lugar de ir al inicio, vamos a elegir el método de pago
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PaymentMethodScreen(
+              citaId: newCitaId,       // Pasamos el ID que nos dio el backend
+              totalAmount: widget.totalCost, // Pasamos el monto
+            ),
           ),
         );
       }
@@ -266,8 +270,6 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
                 border: Border.all(color: AppColors.accent),
                 image: DecorationImage(
                   // LÓGICA HÍBRIDA:
-                  // Si es web, usa network (el path es un blob url)
-                  // Si es móvil, usa file
                   image: kIsWeb 
                       ? NetworkImage(photo.path) 
                       : FileImage(File(photo.path)) as ImageProvider,
@@ -563,9 +565,9 @@ class _CoordinarCitaScreenState extends State<CoordinarCitaScreen> {
               
               const SizedBox(height: 40),
               
-              // 5. BOTÓN PRINCIPAL (Siempre habilitado)
+              // 5. BOTÓN PRINCIPAL
               ElevatedButton(
-                onPressed: _handleContinue, // Llamamos a la nueva función que valida y redirige
+                onPressed: _handleContinue,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.success,
                   padding: const EdgeInsets.symmetric(vertical: 16),

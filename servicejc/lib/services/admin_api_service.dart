@@ -2,13 +2,20 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:servicejc/models/cita_model.dart';
 import 'package:servicejc/models/user_model.dart';
-import 'api_service.dart'; // Asegúrate de que este import sea correcto
+import 'api_service.dart'; 
 
 class AdminApiService extends ApiService {
+  
+  // ---------------------------------------------------------------------------
+  // 1. MÉTRICAS DEL DASHBOARD
+  // ---------------------------------------------------------------------------
   Future<Map<String, dynamic>> getDashboardMetrics() async {
+    // ✅ CORRECCIÓN: Esperamos el token
+    final headers = await getHeaders();
+
     final response = await http.get(
       Uri.parse('$baseUrl/admin/metrics'),
-      headers: getHeaders(),
+      headers: headers, // Usamos la variable
     );
 
     if (response.statusCode == 200) {
@@ -18,10 +25,16 @@ class AdminApiService extends ApiService {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // 2. ELIMINAR TÉCNICO
+  // ---------------------------------------------------------------------------
   Future<void> eliminarTecnico(String tecnicoId) async {
+    // ✅ CORRECCIÓN
+    final headers = await getHeaders();
+
     final response = await http.delete(
       Uri.parse('$baseUrl/admin/tecnicos/$tecnicoId'),
-      headers: getHeaders(),
+      headers: headers,
     );
 
     if (response.statusCode != 204) {
@@ -29,98 +42,104 @@ class AdminApiService extends ApiService {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // 3. OBTENER LISTA DE TÉCNICOS
+  // ---------------------------------------------------------------------------
   Future<List<UserModel>> fetchTechnicians() async {
+    // ✅ CORRECCIÓN
+    final headers = await getHeaders();
+
     final response = await http.get(
       Uri.parse('$baseUrl/admin/tecnicos'),
-      headers: getHeaders(),
+      headers: headers,
     );
 
     if (response.statusCode == 200) {
       Iterable data = json.decode(response.body);
-      // Mapear la respuesta del backend a List<UserModel>
       return List<UserModel>.from(
         data.map((model) => UserModel.fromJson(model)),
       );
     } else {
-      throw Exception(
-        'Error al obtener la lista de técnicos: ${response.body}',
-      );
+      throw Exception('Error al obtener la lista de técnicos: ${response.body}');
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // 4. OBTENER CITAS POR ID DE TÉCNICO
+  // ---------------------------------------------------------------------------
   Future<List<CitaModel>> fetchCitasByTechnicianId(String technicianId) async {
-    // CLAVE: Usar el nuevo endpoint /citas/tecnico/{id}
+    // ✅ CORRECCIÓN
+    final headers = await getHeaders();
+
     final response = await http.get(
       Uri.parse('$baseUrl/citas/tecnico/$technicianId'),
-      headers: getHeaders(),
+      headers: headers,
     );
 
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
-      // El mapeo aquí funcionará gracias a los cambios de Null Safety en CitaModel.
       return data.map((json) => CitaModel.fromJson(json)).toList();
     } else {
-      throw Exception(
-        'Error al obtener las citas asignadas: ${response.statusCode} - ${response.body}',
-      );
+      throw Exception('Error al obtener las citas asignadas: ${response.statusCode}');
     }
   }
 
-  /// Actualiza una cita (incluyendo status y tecnicoId).
-  /// Endpoint: PUT /api/citas/{id} (asumiendo que está implementado en el backend)
+  // ---------------------------------------------------------------------------
+  // 5. ACTUALIZAR CITA
+  // ---------------------------------------------------------------------------
   Future<CitaModel> updateCita(CitaModel cita) async {
-    // Usamos el método toJson() de CitaModel que combina 'fecha' y 'hora'
-    // en 'fechaHora' y mapea 'status' a 'estado' para el backend Java.
+    // ✅ CORRECCIÓN
+    final headers = await getHeaders();
+    
     final citaJson = cita.toJson();
 
     final response = await http.put(
       Uri.parse('$baseUrl/citas/${cita.id}'),
-      headers: getHeaders(),
+      headers: headers,
       body: jsonEncode(citaJson),
     );
 
     if (response.statusCode == 200) {
       return CitaModel.fromJson(json.decode(response.body));
     } else {
-      throw Exception(
-        'Error al actualizar la cita: ${response.statusCode} - ${response.body}',
-      );
+      throw Exception('Error al actualizar la cita: ${response.statusCode}');
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // 6. ACTUALIZAR TÉCNICO
+  // ---------------------------------------------------------------------------
   Future<UserModel> updateTecnico(UserModel tecnico) async {
-    // 1. Validar ID
     if (tecnico.id == null || tecnico.id!.isEmpty) {
       throw Exception('El ID del técnico es requerido para la actualización.');
     }
 
-    // 2. Envío de la solicitud PUT
+    // ✅ CORRECCIÓN
+    final headers = await getHeaders();
+
     final response = await http.put(
-      // La ruta debe coincidir con el endpoint de Java: /api/admin/tecnicos/{id}
       Uri.parse('$baseUrl/admin/tecnicos/${tecnico.id}'),
-      headers: getHeaders(),
-      // Envía el UserModel completo. El Backend (Java) usa solo los campos no nulos.
+      headers: headers,
       body: jsonEncode(tecnico.toJson()),
     );
 
     if (response.statusCode == 200) {
-      // Si es exitoso, mapea el objeto UserModel devuelto por el Backend
       return UserModel.fromJson(json.decode(response.body));
     } else {
-      throw Exception(
-        'Error al actualizar el técnico: ${response.statusCode} - ${response.body}',
-      );
+      throw Exception('Error al actualizar el técnico: ${response.statusCode}');
     }
   }
 
-  Future<void> reasignarCita(
-    String citaId,
-    String nuevoTecnicoId,
-    DateTime nuevaFechaHora,
-  ) async {
+  // ---------------------------------------------------------------------------
+  // 7. REASIGNAR CITA
+  // ---------------------------------------------------------------------------
+  Future<void> reasignarCita(String citaId, String nuevoTecnicoId, DateTime nuevaFechaHora) async {
+    // ✅ CORRECCIÓN
+    final headers = await getHeaders();
+
     final response = await http.patch(
       Uri.parse('$baseUrl/admin/citas/$citaId/reasignar'),
-      headers: getHeaders(),
+      headers: headers,
       body: jsonEncode(<String, dynamic>{
         'nuevoTecnicoId': nuevoTecnicoId,
         'nuevaFechaHora': nuevaFechaHora.toIso8601String(),
@@ -132,10 +151,16 @@ class AdminApiService extends ApiService {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // 8. OBTENER CLIENTES
+  // ---------------------------------------------------------------------------
   Future<List<UserModel>> getClients() async {
+    // ✅ CORRECCIÓN
+    final headers = await getHeaders();
+
     final response = await http.get(
       Uri.parse('$baseUrl/admin/clients'),
-      headers: getHeaders(),
+      headers: headers,
     );
 
     if (response.statusCode == 200) {
@@ -144,16 +169,20 @@ class AdminApiService extends ApiService {
         data.map((model) => UserModel.fromJson(model)),
       );
     } else {
-      throw Exception(
-        'Error al obtener la lista de clientes: ${response.body}',
-      );
+      throw Exception('Error al obtener la lista de clientes: ${response.body}');
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // 9. ELIMINAR USUARIO (CLIENTE)
+  // ---------------------------------------------------------------------------
   Future<void> deleteUser(String userId) async {
+    // ✅ CORRECCIÓN
+    final headers = await getHeaders();
+
     final response = await http.delete(
       Uri.parse('$baseUrl/admin/clients/$userId'),
-      headers: getHeaders(),
+      headers: headers,
     );
 
     if (response.statusCode != 204) {

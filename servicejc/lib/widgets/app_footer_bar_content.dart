@@ -41,6 +41,7 @@ class AppFooterBarContent extends StatelessWidget {
                 const SizedBox(width: 8),
                 Image.asset(
                   'assets/images/logojcservicios.png', 
+                  cacheWidth: 300,
                   height: 40, 
                   fit: BoxFit.contain, 
                 ),

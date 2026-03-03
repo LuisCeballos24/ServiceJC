@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_text_styles.dart';
+import 'package:servicejc/theme/app_colors.dart';
+import 'package:servicejc/theme/app_text_styles.dart';
+import 'package:servicejc/screens/payment_screen.dart'; // Asegúrate de tener este archivo también
 
 class PaymentMethodScreen extends StatelessWidget {
-  const PaymentMethodScreen({super.key});
+  final String citaId;
+  final double totalAmount;
+
+  const PaymentMethodScreen({
+    super.key,
+    required this.citaId,
+    required this.totalAmount,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -28,50 +36,61 @@ class PaymentMethodScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Selecciona un método para pagar:',
-              style: AppTextStyles.h2.copyWith(color: AppColors.cardTitle),
+              'Total a pagar: \$${totalAmount.toStringAsFixed(2)}',
+              style: AppTextStyles.h2.copyWith(color: AppColors.primary),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Selecciona una opción:',
+              style: AppTextStyles.bodyText.copyWith(color: AppColors.cardTitle),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
+
+            // --- BOTÓN YAPPY ---
             ElevatedButton(
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Redirigiendo a Yappy...')),
+                  const SnackBar(content: Text('Integración de Yappy próximamente...')),
                 );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.elevatedButton,
-                foregroundColor: AppColors.elevatedButtonForeground,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
               ),
-              child: Text(
-                'Pagar con Yappy',
-                style: AppTextStyles.elevatedButton,
-              ),
+              child: const Text('Pagar con Yappy', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ),
+            
             const SizedBox(height: 24),
+
+            // --- BOTÓN TARJETA (CUBO) ---
             ElevatedButton(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Redirigiendo a BAC Credomatic...'),
+                // Navegamos a la pantalla de Cubo (PaymentScreen)
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PaymentScreen(
+                      citaId: citaId,
+                      totalAmount: totalAmount,
+                    ),
                   ),
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.elevatedButton,
-                foregroundColor: AppColors.elevatedButtonForeground,
+                backgroundColor: AppColors.success,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
               ),
-              child: Text(
-                'Pagar con Tarjeta (BAC)',
-                style: AppTextStyles.elevatedButton,
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.credit_card, color: Colors.white),
+                  SizedBox(width: 10),
+                  Text('Pagar con Tarjeta (Visa/MC)', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+                ],
               ),
             ),
           ],

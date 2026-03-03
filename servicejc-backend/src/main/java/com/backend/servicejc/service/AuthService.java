@@ -3,81 +3,94 @@ package com.backend.servicejc.service;
 import com.backend.servicejc.model.AuthResponse;
 import com.backend.servicejc.model.LoginDto;
 import com.backend.servicejc.model.Usuario;
-import com.google.api.core.ApiFuture;
+import com.backend.servicejc.security.JwtTokenProvider;
+import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.QuerySnapshot;
-import com.google.cloud.firestore.QueryDocumentSnapshot;
-import com.google.cloud.firestore.DocumentReference;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder; // ✅ NECESARIO
 import org.springframework.stereotype.Service;
+
 import java.util.concurrent.ExecutionException;
-import java.util.List;
 
 @Service
 public class AuthService {
 
     private final Firestore firestore;
-    private final String COLLECTION_NAME = "usuarios";
+    private final JwtTokenProvider jwtTokenProvider;
+    private final PasswordEncoder passwordEncoder; // ✅ NECESARIO PARA COMPARAR HASHES
 
     @Autowired
-    public AuthService(Firestore firestore) {
+    public AuthService(Firestore firestore, JwtTokenProvider jwtTokenProvider, PasswordEncoder passwordEncoder) {
         this.firestore = firestore;
+        this.jwtTokenProvider = jwtTokenProvider;
+        this.passwordEncoder = passwordEncoder;
     }
 
-    // Método para registrar un nuevo usuario
+    // =========================================================================
+    // 📝 REGISTRO (CORREGIDO: Usa Correo como ID + Encripta Password)
+    // =========================================================================
     public void registerUser(Usuario usuario) throws ExecutionException, InterruptedException {
-        // En un entorno real, aquí se debería encriptar la contraseña antes de guardarla
-        // String hashedPassword = passwordEncoder.encode(usuario.getContrasena());
-        // usuario.setContrasena(hashedPassword);
+        // 1. Usar el CORREO como ID del documento (Vital para evitar duplicados y errores 403)
+        String userId = usuario.getCorreo(); 
+        
+        DocumentSnapshot doc = firestore.collection("usuarios").document(userId).get().get();
 
-        // Verifica si el correo ya está registrado
-        ApiFuture<QuerySnapshot> query = firestore.collection(COLLECTION_NAME)
-                .whereEqualTo("correo", usuario.getCorreo())
-                .get();
-
-        List<QueryDocumentSnapshot> documents = query.get().getDocuments();
-        if (!documents.isEmpty()) {
-            throw new IllegalArgumentException("El correo ya está registrado.");
+        if (doc.exists()) {
+            throw new RuntimeException("El correo ya está registrado.");
         }
 
-        firestore.collection(COLLECTION_NAME).add(usuario);
+        // 2. Preparar Usuario Seguro
+        usuario.setId(userId); // ID = Correo
+        
+        // 🔐 ENCRIPTAR (Vital)
+        String passEncriptada = passwordEncoder.encode(usuario.getContrasena());
+        usuario.setContrasena(passEncriptada);
+
+        // 🛡️ ROL STRING (Vital)
+        if (usuario.getRol() == null || usuario.getRol().isEmpty()) {
+            usuario.setRol("USER");
+        }
+
+        // 3. Guardar con .set() (no .add()) para forzar el ID
+        firestore.collection("usuarios").document(userId).set(usuario).get();
     }
 
-    // Método para autenticar un usuario
-   public AuthResponse loginUser(LoginDto loginDto) throws ExecutionException, InterruptedException {
-        ApiFuture<QuerySnapshot> query = firestore.collection(COLLECTION_NAME)
-                .whereEqualTo("correo", loginDto.getCorreo())
-                .get();
+    // =========================================================================
+    // 🔐 LOGIN MANUAL (CORREGIDO: Compara Hash vs Texto)
+    // =========================================================================
+    public AuthResponse loginUser(LoginDto loginDto) throws ExecutionException, InterruptedException {
+        System.out.println("🔵 [LOGIN] Intentando entrar: " + loginDto.getCorreo());
 
-        List<QueryDocumentSnapshot> documents = query.get().getDocuments();
-        if (documents.isEmpty()) {
-            System.out.println("Login Failed: User not found for email: " + loginDto.getCorreo());
-            throw new IllegalArgumentException("Credenciales incorrectas.");
+        // 1. Buscar Directamente por ID (Correo) -> Más rápido y seguro
+        DocumentSnapshot doc = firestore.collection("usuarios").document(loginDto.getCorreo()).get().get();
+
+        if (!doc.exists()) {
+            System.out.println("❌ Usuario no encontrado.");
+            throw new RuntimeException("Credenciales inválidas");
         }
 
-        Usuario usuario = documents.get(0).toObject(Usuario.class);
-        System.out.println("Login Attempt: Found user " + usuario.getCorreo());
-        System.out.println("Provided Password: " + loginDto.getContrasena());
-        System.out.println("Stored Password: " + usuario.getContrasena());
+        Usuario usuario = doc.toObject(Usuario.class);
+        // Asegurar ID
+        if (usuario.getId() == null) usuario.setId(doc.getId());
 
-        // CORRECCIÓN: La contraseña no está encriptada, por lo tanto, no se puede usar BCryptPasswordEncoder.
-        if (!loginDto.getContrasena().equals(usuario.getContrasena())) {
-            System.out.println("Login Failed: Password mismatch for user: " + usuario.getCorreo());
-            throw new IllegalArgumentException("Credenciales incorrectas.");
+        // 2. VERIFICAR CONTRASEÑA (Encriptada vs Texto Plano)
+        // passwordEncoder.matches( "123456", "$2a$10$..." )
+        if (!passwordEncoder.matches(loginDto.getContrasena(), usuario.getContrasena())) {
+             System.out.println("❌ Contraseña incorrecta (Hash no coincide).");
+             throw new RuntimeException("Credenciales inválidas");
         }
-        
-        String token = "fake-jwt-token-for-user-" + documents.get(0).getId();
-        String userRoleString = null;
-        
-        if (usuario.getRol() != null) {
-            userRoleString = usuario.getRol().name(); // Asumiendo que Rol es un enum
-        }
-        
-        AuthResponse response = new AuthResponse(token, userRoleString, usuario.getId()); // <-- AGREGAR userId al constructor
-        
-        System.out.println("Login Successful: Returning AuthResponse -> Token: " + response.getToken() + ", Rol: " + response.getRol() + ", userId: " + response.getUserId());
-        System.out.println("Login Successful: " + response);
-        
-        return response;
+
+        // 3. Generar Token
+        // OJO: Aquí 'usuario.getId()' es el CORREO. Eso es lo que irá en el Token.
+        Authentication auth = new UsernamePasswordAuthenticationToken(usuario.getId(), null);
+        String jwt = jwtTokenProvider.generateToken(auth);
+
+        // 4. Devolver Rol seguro
+        String rolResponse = (usuario.getRol() != null) ? usuario.getRol() : "USER";
+
+        System.out.println("🚀 Login Exitoso. Rol: " + rolResponse);
+        return new AuthResponse(jwt, rolResponse, usuario.getId());
     }
 }

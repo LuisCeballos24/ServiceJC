@@ -1,100 +1,159 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:servicejc/models/categoria_principal_model.dart';
+import 'package:servicejc/screens/servicios_screen.dart'; 
 
-class PromotionsSection extends StatelessWidget {
-  const PromotionsSection({super.key});
+class PromotionsSection extends StatefulWidget {
+  final List<CategoriaPrincipalModel> servicios;
 
-  static const Color secondaryColor = Color(0xFF2C2C2C);
+  const PromotionsSection({super.key, required this.servicios});
+
+  @override
+  State<PromotionsSection> createState() => _PromotionsSectionState();
+}
+
+class _PromotionsSectionState extends State<PromotionsSection> {
   static const Color accentColor = Color(0xFFFFD700);
+  final PageController _pageController = PageController(viewportFraction: 0.95);
+  Timer? _timer;
+  int _currentPage = 0;
 
-  final List<Map<String, dynamic>> promotions = const [
-    {
-      'title': 'Reparación de Electricidad',
-      'price': 'desde \$10',
-      'icon': Icons.electrical_services_rounded,
-    },
-    {
-      'title': 'Inspección con Dron',
-      'price': 'desde \$15',
-      'icon': Icons.airplanemode_active_rounded,
-    },
-    {
-      'title': 'Instalaciones Menores',
-      'price': 'desde \$20',
-      'icon': Icons.build_rounded,
-    },
-    {
-      'title': 'Limpieza de Hogar',
-      'price': 'desde \$25',
-      'icon': Icons.clean_hands_rounded,
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _startAutoPlay();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _startAutoPlay() {
+    _timer = Timer.periodic(const Duration(seconds: 4), (Timer timer) {
+      // ✅ CORREGIDO: Aseguramos bloques con llaves
+      if (widget.servicios.isNotEmpty && _pageController.hasClients) {
+        _currentPage++;
+        if (_currentPage >= widget.servicios.take(5).length) {
+          _currentPage = 0;
+          _pageController.jumpToPage(0);
+        } else {
+          _pageController.animateToPage(
+            _currentPage,
+            duration: const Duration(milliseconds: 800),
+            curve: Curves.fastOutSlowIn,
+          );
+        }
+      }
+    });
+  }
+
+  // ✅ CORREGIDO: Todos los if/else tienen llaves
+  String _getImagePath(CategoriaPrincipalModel categoria) {
+    final String data = "${categoria.id} ${categoria.nombre}".toLowerCase();
+
+    if (data.contains('decor')) {
+      return 'assets/images/services/decoracion.png';
+    } else if (data.contains('eban') || data.contains('mader')) {
+      return 'assets/images/services/ebanistas.png';
+    } else if (data.contains('panel') || data.contains('solar')) {
+      return 'assets/images/services/paneles.png';
+    } else if (data.contains('ventan') || data.contains('vidrio')) {
+      return 'assets/images/services/ventanas.png';
+    } else if (data.contains('aire') || data.contains('acond')) {
+      return 'assets/images/services/aire_acondicionado.png';
+    } else if (data.contains('elect')) {
+      return 'assets/images/services/electricidad.png';
+    } else if (data.contains('limp')) {
+      return 'assets/images/services/limpieza_general.png';
+    } else if (data.contains('plom') || data.contains('agua')) {
+      return 'assets/images/services/plomeria.png';
+    } else if (data.contains('remodel')) {
+      return 'assets/images/services/remodelaciones.png';
+    } else if (data.contains('const')) {
+      return 'assets/images/services/construccion.png';
+    } else if (data.contains('pint')) {
+      return 'assets/images/services/pintura.png';
+    }
+    
+    return 'assets/images/services/mantenimiento.png';
+  }
 
   @override
   Widget build(BuildContext context) {
+    final promos = widget.servicios.take(5).toList();
+
+    // ✅ CORREGIDO
+    if (promos.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 16),
         const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.0),
+          padding: EdgeInsets.symmetric(horizontal: 20.0),
           child: Text(
-            'Promociones Especiales',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: accentColor,
-            ),
+            '🔥 Promociones Destacadas',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: accentColor),
           ),
         ),
         const SizedBox(height: 16),
         SizedBox(
-          height: 200,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: promotions.length,
+          height: 340,
+          child: PageView.builder(
+            controller: _pageController,
+            itemCount: promos.length,
+            padEnds: true,
+            onPageChanged: (index) => _currentPage = index,
             itemBuilder: (context, index) {
-              final promo = promotions[index];
-              return Container(
-                width: 250,
-                margin: const EdgeInsets.only(right: 16),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: secondaryColor,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: accentColor),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 5,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(promo['icon'], color: accentColor, size: 50),
-                    const SizedBox(height: 12),
-                    Text(
-                      promo['title'],
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      promo['price'],
-                      style: const TextStyle(
-                        color: accentColor,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
+              final servicio = promos[index];
+              return GestureDetector(
+                onTap: () {
+                   Navigator.push(context, MaterialPageRoute(builder: (_) => ServiciosScreen(categoria: servicio)));
+                },
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 8.0),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    image: DecorationImage(
+                      image: AssetImage(_getImagePath(servicio)),
+                      fit: BoxFit.cover
+                    )
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
                       ),
                     ),
-                  ],
+                    padding: const EdgeInsets.all(20),
+                    alignment: Alignment.bottomLeft,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: accentColor,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text('OFERTA', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10)),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          servicio.nombre,
+                          style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               );
             },
