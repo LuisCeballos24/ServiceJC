@@ -1,12 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'api_service.dart'; 
+import 'api_service.dart';
 
 class PaymentBackendService extends ApiService {
-  
   Future<void> procesarPagoBackend(Map<String, dynamic> solicitudPago) async {
-    final url = Uri.parse('$baseUrl/pagos/procesar'); 
-    
+    final url = Uri.parse('$baseUrl/pagos/procesar');
+
     // 1. Obtenemos los headers (Token)
     final headers = await getHeaders();
 
@@ -17,6 +16,7 @@ class PaymentBackendService extends ApiService {
     print("=========================================");
     print("🚀 ENVIANDO PAGO AL BACKEND JAVA...");
     print("URL: $url");
+    print("HEADERS QUE ESTOY ENVIANDO: $headers"); // 👉 AGREGA ESTA LÍNEA
     print("=========================================");
 
     final response = await http.post(
@@ -36,14 +36,18 @@ class PaymentBackendService extends ApiService {
       try {
         // Intentamos leer el JSON de error que mandó tu PagoController
         final errorData = jsonDecode(response.body);
-        throw Exception(errorData['error'] ?? errorData['mensaje'] ?? 'Error desconocido');
+        throw Exception(
+          errorData['error'] ?? errorData['mensaje'] ?? 'Error desconocido',
+        );
       } catch (e) {
         // Si entra aquí, es porque el body NO era JSON (era texto plano o vacío).
         // Esto evita el pantallazo rojo "Unexpected end of JSON input"
         if (e is FormatException) {
-           throw Exception('Error del Servidor (${response.statusCode}): ${response.body.isEmpty ? "Respuesta vacía" : response.body}');
+          throw Exception(
+            'Error del Servidor (${response.statusCode}): ${response.body.isEmpty ? "Respuesta vacía" : response.body}',
+          );
         } else {
-           rethrow; // Lanza el error original de la línea 39
+          rethrow; // Lanza el error original de la línea 39
         }
       }
     }

@@ -50,6 +50,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/servicios/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/categorias_principales/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/locations/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/pagos/**").permitAll()
                 
                 // --- ARREGLO TESTIMONIOS ---
                 // Lectura (GET) -> PÚBLICO

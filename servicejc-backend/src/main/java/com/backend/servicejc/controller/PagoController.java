@@ -22,7 +22,7 @@ public class PagoController {
     }
 
     @PostMapping // El endpoint será POST /api/pagos
-    @PreAuthorize("hasAnyAuthority('USUARIO_FINAL', 'ADMINISTRATIVO')")
+    // @PreAuthorize("hasAnyAuthority('USUARIO_FINAL', 'ADMINISTRATIVO')")
     public ResponseEntity<?> processPayment(@RequestBody SolicitudPago solicitud, Authentication authentication) {
         try {
             // Obtenemos el ID del usuario logueado por seguridad
