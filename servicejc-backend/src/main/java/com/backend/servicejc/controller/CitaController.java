@@ -75,10 +75,12 @@ public class CitaController {
                 imageUrl = storageService.uploadFile(file, path);
             }
 
-            cita.setImageUrl(imageUrl);
-            citaService.createCita(cita);
+          cita.setImageUrl(imageUrl);
+            // Guardamos el ID que nos devuelve el servicio
+            String nuevaCitaId = citaService.createCita(cita);
 
-            return new ResponseEntity<>("Cita creada exitosamente.", HttpStatus.CREATED);
+            // Devolvemos el ID real a Flutter
+            return new ResponseEntity<>(nuevaCitaId, HttpStatus.CREATED);
 
         } catch (IOException e) {
             e.printStackTrace();

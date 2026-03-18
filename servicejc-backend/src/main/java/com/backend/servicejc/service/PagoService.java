@@ -58,9 +58,9 @@ public class PagoService {
         result.get(); // Espera a que la operación se complete
 
         // 4. 🟢 NUEVO: ACTUALIZAR EL ESTADO DE LA CITA A "PAGADA"
-        Cita citaActual = citaService.getCitaById(solicitud.getCitaId());
+       Cita citaActual = citaService.getCitaById(solicitud.getCitaId());
         if (citaActual != null) {
-            citaActual.setEstado("PAGADA");
+            citaActual.setEstado("PENDIENTE"); // <--- CAMBIA ESTO AQUÍ
             citaService.updateCita(solicitud.getCitaId(), citaActual);
         }
 

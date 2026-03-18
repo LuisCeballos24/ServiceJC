@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; 
 import 'package:servicejc/theme/app_colors.dart';
 import 'package:servicejc/theme/app_text_styles.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // ✅ IMPORTAMOS EL NUEVO SERVICIO QUE APUNTA A TU JAVA
 import 'package:servicejc/services/payment_backend_service.dart'; 
@@ -76,12 +77,36 @@ class _PaymentScreenState extends State<PaymentScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('¡Pago Aprobado! Tu cita ha sido pagada y confirmada.', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            content: Text('¡Pago Aprobado! Abriendo WhatsApp para notificar al Admin...', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             backgroundColor: AppColors.success,
-            duration: Duration(seconds: 4),
+            duration: Duration(seconds: 3),
           ),
         );
-        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+
+        // 1. Armamos el mensaje automático para el Administrador
+        final String mensajeAdmin = "✅ *NUEVO PAGO CONFIRMADO*\n\n"
+            "¡Hola Admin! Acabo de realizar el pago de mi cita.\n"
+            "*ID Cita:* ${widget.citaId}\n"
+            "*Monto Pagado:* \$${widget.totalAmount.toStringAsFixed(2)}\n\n"
+            "Quedo a la espera de la asignación del técnico.";
+        
+        // 2. Preparamos la URL de WhatsApp con el número del admin (68729697)
+        final Uri whatsappUrl = Uri.parse(
+          'https://wa.me/50768729697?text=${Uri.encodeComponent(mensajeAdmin)}'
+        );
+
+        // 3. Intentamos abrir WhatsApp y luego redirigimos al Home
+        try {
+          await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
+        } catch (e) {
+          debugPrint("No se pudo abrir WhatsApp: $e");
+        } finally {
+          // Independientemente de si el cliente tiene WhatsApp instalado o no, 
+          // lo mandamos de vuelta a la pantalla principal para que no se quede atrapado.
+          if (mounted) {
+            Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+          }
+        }
       }
     } catch (e) {
       if (mounted) {

@@ -31,8 +31,7 @@ public class AuthService {
     // =========================================================================
     // 📝 REGISTRO (CORREGIDO: Usa Correo como ID + Encripta Password)
     // =========================================================================
-    public void registerUser(Usuario usuario) throws ExecutionException, InterruptedException {
-        // 1. Usar el CORREO como ID del documento (Vital para evitar duplicados y errores 403)
+   public void registerUser(Usuario usuario) throws ExecutionException, InterruptedException {
         String userId = usuario.getCorreo(); 
         
         DocumentSnapshot doc = firestore.collection("usuarios").document(userId).get().get();
@@ -41,19 +40,28 @@ public class AuthService {
             throw new RuntimeException("El correo ya está registrado.");
         }
 
-        // 2. Preparar Usuario Seguro
-        usuario.setId(userId); // ID = Correo
-        
-        // 🔐 ENCRIPTAR (Vital)
+        // Preparar Usuario Seguro
+        usuario.setId(userId); 
         String passEncriptada = passwordEncoder.encode(usuario.getContrasena());
         usuario.setContrasena(passEncriptada);
 
-        // 🛡️ ROL STRING (Vital)
         if (usuario.getRol() == null || usuario.getRol().isEmpty()) {
             usuario.setRol("USER");
         }
 
-        // 3. Guardar con .set() (no .add()) para forzar el ID
+        // 👇 NUEVA LÓGICA: INICIALIZAR BILLETERA Y MEMBRESÍA
+        usuario.setWalletBalance(0.0); // Inicia con $0.00
+        usuario.setIsPremium(false);   // Inicia como usuario normal
+
+        // Generar Código de Referido (Ej: Las primeras 4 letras del nombre + 4 números aleatorios)
+        String baseName = usuario.getNombre().replaceAll("\\s+", "").toUpperCase();
+        if (baseName.length() > 4) {
+            baseName = baseName.substring(0, 4);
+        }
+        int randomNum = (int)(Math.random() * 9000) + 1000; // Número entre 1000 y 9999
+        usuario.setCodigoReferido(baseName + randomNum);
+
+        // Guardar en Firestore
         firestore.collection("usuarios").document(userId).set(usuario).get();
     }
 

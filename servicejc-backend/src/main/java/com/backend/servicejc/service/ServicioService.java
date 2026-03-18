@@ -45,23 +45,21 @@ public class ServicioService {
     }
 
     public List<CategoriaPrincipalModel> fetchCategoriasPrincipales() throws ExecutionException, InterruptedException {
-        ApiFuture<QuerySnapshot> future = firestore.collection("servicios").get();
+        // 🔥 Usamos la ruta completa de Query.Direction para evitar errores de importación
+        ApiFuture<QuerySnapshot> future = firestore.collection("servicios")
+                .orderBy("orden", com.google.cloud.firestore.Query.Direction.ASCENDING) 
+                .get();
+        
         List<QueryDocumentSnapshot> documents = future.get().getDocuments();
         
-        List<CategoriaPrincipalModel> categorias = documents.stream().map(doc -> {
+        return documents.stream().map(doc -> {
             Servicio serv = doc.toObject(Servicio.class);
-            return new CategoriaPrincipalModel(serv.getId(), serv.getNombre()); 
+            return new CategoriaPrincipalModel(
+                serv.getId(), 
+                serv.getNombre(), 
+                serv.getImageUrl()
+            ); 
         }).collect(Collectors.toList());
-
-        // 👉 NUEVO ORDENAMIENTO A PRUEBA DE BALAS
-        categorias.sort((c1, c2) -> {
-            int index1 = obtenerIndice(c1.getNombre());
-            int index2 = obtenerIndice(c2.getNombre());
-            
-            return Integer.compare(index1, index2);
-        });
-
-        return categorias;
     }
 
     // 💡 Método auxiliar para buscar sin que importen mayúsculas o espacios extra
@@ -133,6 +131,45 @@ public class ServicioService {
         "Cielo raso"
     );
 
+    private String obtenerUrlImagen(String nombreServicio) {
+        // La ruta base que vimos en tu captura (usamos %2F que significa "/")
+        String baseUrl = "https://firebasestorage.googleapis.com/v0/b/servicejc-d3aca.firebasestorage.app/o/images%2Fservices%2F";
+        String suffix = "?alt=media"; 
+        
+        String nombreArchivo = "mantenimiento.png"; // Imagen por defecto si no encuentra
+        String nombreLower = nombreServicio.toLowerCase();
+
+        // Mapeo basado en tus archivos de Flutter anteriores
+        if (nombreLower.contains("aire acondicionado")) nombreArchivo = "aire_acondicionado.png";
+        else if (nombreLower.contains("repello")) nombreArchivo = "repello.png";
+        else if (nombreLower.contains("plomer")) nombreArchivo = "plomeria.png";
+        else if (nombreLower.contains("filtraciones")) nombreArchivo = "filtraciones.png";
+        else if (nombreLower.contains("sillones")) nombreArchivo = "sillones.png";
+        else if (nombreLower.contains("ebanistas")) nombreArchivo = "ebanistas.png";
+        else if (nombreLower.contains("electricidad")) nombreArchivo = "electricidad.png";
+        else if (nombreLower.contains("preventivos")) nombreArchivo = "preventivos.png";
+        else if (nombreLower.contains("decorativas") || nombreLower.contains("decoradores")) nombreArchivo = "decoracion.png";
+        else if (nombreLower.contains("pintura exterior") || nombreLower.contains("pintores")) nombreArchivo = "pintura.png";
+        else if (nombreLower.contains("limpieza general") || nombreLower.contains("cocinas, baños")) nombreArchivo = "limpieza_general.png";
+        else if (nombreLower.contains("construcción")) nombreArchivo = "construccion.png";
+        else if (nombreLower.contains("vidrio") || nombreLower.contains("ventanas")) nombreArchivo = "ventanas.png";
+        else if (nombreLower.contains("revestimientos")) nombreArchivo = "revestimientos.png";
+        else if (nombreLower.contains("remodelaciones")) nombreArchivo = "remodelaciones.png";
+        else if (nombreLower.contains("canales")) nombreArchivo = "canales.png";
+        else if (nombreLower.contains("aluminio")) nombreArchivo = "aluminio.png";
+        else if (nombreLower.contains("paneles solares")) nombreArchivo = "paneles.png";
+        else if (nombreLower.contains("menores")) nombreArchivo = "instalaciones_menores.png";
+        else if (nombreLower.contains("dron")) nombreArchivo = "dron.png";
+        else if (nombreLower.contains("soldadura")) nombreArchivo = "soldadura.png";
+        else if (nombreLower.contains("chef")) nombreArchivo = "chef.png";
+        else if (nombreLower.contains("valet")) nombreArchivo = "valet.png";
+        else if (nombreLower.contains("saloneros")) nombreArchivo = "saloneros.png";
+        else if (nombreLower.contains("bartender")) nombreArchivo = "bartender.png";
+        else if (nombreLower.contains("movilizacion")) nombreArchivo = "mudanza.png";
+        else if (nombreLower.contains("cielo raso")) nombreArchivo = "cieloraso.png";
+
+        return baseUrl + nombreArchivo + suffix;
+    }
     // --- MÉTODO DE POBLAMIENTO PLANO (SEED) ---
     public void seedCategoriasYProductos() throws ExecutionException, InterruptedException {
         ApiFuture<QuerySnapshot> check = firestore.collection("servicios").get();
@@ -141,17 +178,30 @@ public class ServicioService {
             return;
         }
 
-        System.out.println("🚀 Iniciando población plana según los Excel (Con todos los detalles)...");
+        System.out.println("🚀 Iniciando población plana según los Excel (Con orden e imágenes)...");
+        com.google.cloud.firestore.WriteBatch batch = firestore.batch(); 
+        
         Map<String, String> mapaServiciosIds = new HashMap<>();
 
-        for (String nombreItem : LISTA_PANTALLA_PRINCIPAL) {
+        for (int i = 0; i < LISTA_PANTALLA_PRINCIPAL.size(); i++) {
+            String nombreItem = LISTA_PANTALLA_PRINCIPAL.get(i);
+            
+            // Creamos una referencia vacía para obtener el ID sin llamar a la red
+            DocumentReference servRef = firestore.collection("servicios").document();
+            
             Map<String, Object> servicio = new HashMap<>();
             servicio.put("nombre", nombreItem);
-            ApiFuture<DocumentReference> servRef = firestore.collection("servicios").add(servicio);
-            String servicioId = servRef.get().getId();
+            servicio.put("orden", i + 1); 
+            servicio.put("imageUrl", obtenerUrlImagen(nombreItem));
+
+            // 👇 EN LUGAR DE .add(), LO METEMOS AL LOTE
+            batch.set(servRef, servicio); 
+            
+            String servicioId = servRef.getId();
             mapaServiciosIds.put(nombreItem, servicioId);
         }
 
+        
         List<Producto> productos = new ArrayList<>();
         final Double COSTO_INSPECCION = 10.00; 
 
@@ -480,9 +530,15 @@ public class ServicioService {
         }
 
         // 3. Inserción Final
-        for (Producto p : productos) {
-            firestore.collection("productos").add(p);
+       for (Producto p : productos) {
+            DocumentReference prodRef = firestore.collection("productos").document();
+            batch.set(prodRef, p);
         }
+
+        // 👇 ¡ESTE ES EL COMANDO MÁGICO QUE EJECUTA LAS 230 OPERACIONES DE GOLPE!
+        batch.commit().get();
+
+        System.out.println("✅ Base de datos poblada de forma estricta (BATCH COMPLETADO).");
 
         System.out.println("✅ Base de datos poblada de forma estricta según documentos.");
     }

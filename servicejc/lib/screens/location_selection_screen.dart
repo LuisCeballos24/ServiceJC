@@ -12,7 +12,11 @@ import 'package:servicejc/theme/app_colors.dart';
 import 'package:servicejc/theme/app_text_styles.dart';
 import 'package:servicejc/models/product_model.dart';
 import 'package:servicejc/screens/coordinar_cita_screen.dart';
-import 'package:servicejc/screens/map_picker_screen.dart'; // Asegúrate de tener este import
+import 'package:servicejc/screens/map_picker_screen.dart';
+
+// 👇 IMPORTAMOS HEADER Y FOOTER
+import 'package:servicejc/widgets/app_bar_content.dart';
+import 'package:servicejc/widgets/app_footer_bar_content.dart';
 
 class LocationSelectionScreen extends StatefulWidget {
   final Map<ProductModel, int> selectedProducts;
@@ -29,8 +33,7 @@ class LocationSelectionScreen extends StatefulWidget {
   });
 
   @override
-  State<LocationSelectionScreen> createState() =>
-      _LocationSelectionScreenState();
+  State<LocationSelectionScreen> createState() => _LocationSelectionScreenState();
 }
 
 class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
@@ -50,7 +53,6 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   
-  // --- VARIABLES PARA EL MAPA ---
   double? _latitude;
   double? _longitude;
   bool _isAutoFilling = false;
@@ -70,7 +72,6 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
   }
 
   // --- LÓGICA DE CARGA DE DATOS ---
-
   Future<void> _fetchProvinces() async {
     setState(() => _isLoading = true);
     try {
@@ -115,7 +116,6 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
   }
 
   // --- LÓGICA DEL MAPA Y AUTO-RELLENADO ---
-  
   String _normalize(String? text) {
     if (text == null) return '';
     return text.toLowerCase()
@@ -179,7 +179,6 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
         }
       }
 
-      // Lógica de emparejamiento con tus listas
       if (googleProvince != null) {
         LocationModel? foundProvince;
         try {
@@ -263,18 +262,11 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
     }
   }
 
-  // --- LÓGICA DE NAVEGACIÓN ---
-
   void _onContinue() {
     if (_formKey.currentState!.validate()) {
-      if (_selectedProvince == null ||
-          _selectedDistrict == null ||
-          _selectedCorregimiento == null) {
+      if (_selectedProvince == null || _selectedDistrict == null || _selectedCorregimiento == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Por favor, complete todos los campos de ubicación.'),
-            backgroundColor: AppColors.danger,
-          ),
+          const SnackBar(content: Text('Por favor, complete todos los campos de ubicación.'), backgroundColor: AppColors.danger),
         );
         return;
       }
@@ -292,7 +284,6 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
             corregimiento: _selectedCorregimiento!,
             barrio: _barrioController.text.trim(),
             casa: _casaController.text.trim(),
-            // Aquí podrías pasar lat/long también si tu backend lo soporta
           ),
         ),
       );
@@ -301,18 +292,20 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 💡 Detectamos el tamaño de pantalla para el Header
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth > 800;
+
     return Scaffold(
+      // 👇 1. USAMOS EL HEADER GLOBAL
       appBar: AppBar(
-        title: Text(
-          'Dirección de Domicilio',
-          style: AppTextStyles.h2.copyWith(color: AppColors.accent),
-        ),
+        title: AppBarContent(isLargeScreen: isLargeScreen),
+        toolbarHeight: isLargeScreen ? 100 : 80,
         backgroundColor: AppColors.primary,
-        iconTheme: const IconThemeData(color: AppColors.accent),
-        titleTextStyle: AppTextStyles.h2.copyWith(color: AppColors.accent),
+        elevation: 0,
+        automaticallyImplyLeading: false, 
       ),
       body: Container(
-        // Fondo degradado igual que RegisterScreen
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -320,189 +313,193 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
             colors: [AppColors.primary, AppColors.secondary],
           ),
         ),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(24.0),
-            children: <Widget>[
-              // TARJETA DE RESUMEN DE ORDEN
-              Card(
-                color: AppColors.secondary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                  side: const BorderSide(color: AppColors.white54, width: 0.5), // Borde sutil
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Resumen de la Orden',
-                        style: AppTextStyles.h4.copyWith(color: AppColors.accent),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Subtotal:',
-                            style: AppTextStyles.bodyText.copyWith(
-                              color: AppColors.softWhite,
-                            ),
-                          ),
-                          Text(
-                            '\$${widget.subtotal.toStringAsFixed(2)}',
-                            style: AppTextStyles.bodyText.copyWith(
-                              color: AppColors.softWhite,
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (widget.discountAmount > 0) ...[
-                        const SizedBox(height: 4),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Descuento:',
-                              style: AppTextStyles.bodyText.copyWith(
-                                color: AppColors.success,
-                              ),
-                            ),
-                            Text(
-                              '-\$${widget.discountAmount.toStringAsFixed(2)}',
-                              style: AppTextStyles.bodyText.copyWith(
-                                color: AppColors.success,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                      const Divider(color: AppColors.white54, height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Total a Pagar:',
-                            style: AppTextStyles.h4.copyWith(
-                              color: AppColors.accent,
-                            ),
-                          ),
-                          Text(
-                            '\$${widget.totalCost.toStringAsFixed(2)}',
-                            style: AppTextStyles.h4.copyWith(
-                              color: AppColors.accent,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              
-              // TÍTULO Y CARGADOR
-              Row(
+        child: Column(
+          children: [
+            // 👇 2. SUB-HEADER
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              color: AppColors.secondary.withOpacity(0.5),
+              child: Row(
                 children: [
-                    Expanded(child: Text('Ubicación del Servicio', style: AppTextStyles.h4.copyWith(color: AppColors.accent))),
-                    if (_isAutoFilling) const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent)),
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: AppColors.accent),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Dirección de Domicilio',
+                      style: AppTextStyles.h2.copyWith(color: AppColors.accent),
+                    ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 16),
+            ),
 
-              // BOTÓN DEL MAPA INTEGRADO
-              ElevatedButton.icon(
-                onPressed: _isAutoFilling ? null : _pickLocation,
-                icon: Icon(_latitude != null ? Icons.check_circle : Icons.map, color: AppColors.primary),
-                label: Text(
-                    _latitude != null ? 'Ubicación Seleccionada' : 'Seleccionar en Mapa', 
-                    style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _latitude != null ? Colors.greenAccent : AppColors.accent,
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                ),
-              ),
-              const SizedBox(height: 24),
+            // 👇 3. SCROLLVIEW CON EL FORMULARIO Y EL FOOTER
+            Expanded(
+              child: CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Form(
+                      key: _formKey,
+                      child: Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            // TARJETA DE RESUMEN DE ORDEN
+                            Card(
+                              color: AppColors.secondary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
+                                side: const BorderSide(color: AppColors.white54, width: 0.5), 
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Resumen de la Orden', style: AppTextStyles.h4.copyWith(color: AppColors.accent)),
+                                    const SizedBox(height: 12),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text('Subtotal:', style: AppTextStyles.bodyText.copyWith(color: AppColors.softWhite)),
+                                        Text('\$${widget.subtotal.toStringAsFixed(2)}', style: AppTextStyles.bodyText.copyWith(color: AppColors.softWhite)),
+                                      ],
+                                    ),
+                                    if (widget.discountAmount > 0) ...[
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text('Descuento:', style: AppTextStyles.bodyText.copyWith(color: AppColors.success)),
+                                          Text('-\$${widget.discountAmount.toStringAsFixed(2)}', style: AppTextStyles.bodyText.copyWith(color: AppColors.success)),
+                                        ],
+                                      ),
+                                    ],
+                                    const Divider(color: AppColors.white54, height: 20),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text('Total a Pagar:', style: AppTextStyles.h4.copyWith(color: AppColors.accent)),
+                                        Text('\$${widget.totalCost.toStringAsFixed(2)}', style: AppTextStyles.h4.copyWith(color: AppColors.accent)),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            
+                            Row(
+                              children: [
+                                  Expanded(child: Text('Ubicación del Servicio', style: AppTextStyles.h4.copyWith(color: AppColors.accent))),
+                                  if (_isAutoFilling) const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent)),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
 
-              // CAMPOS DE DIRECCIÓN (Alto Contraste)
-              _buildLocationDropdown(
-                label: 'Provincia',
-                items: _provinces,
-                selectedItem: _selectedProvince,
-                onChanged: (val) {
-                  setState(() => _selectedProvince = val);
-                  if (val != null) _fetchDistricts(val.id);
-                },
-                isEnabled: !_isLoading,
-              ),
-              const SizedBox(height: 16),
-              _buildLocationDropdown(
-                label: 'Distrito',
-                items: _districts,
-                selectedItem: _selectedDistrict,
-                onChanged: (val) {
-                  setState(() => _selectedDistrict = val);
-                  if (val != null) _fetchCorregimientos(val.id);
-                },
-                isEnabled: _selectedProvince != null && !_isLoading,
-              ),
-              const SizedBox(height: 16),
-              _buildLocationDropdown(
-                label: 'Corregimiento',
-                items: _corregimientos,
-                selectedItem: _selectedCorregimiento,
-                onChanged: (val) => setState(() => _selectedCorregimiento = val),
-                isEnabled: _selectedDistrict != null && !_isLoading,
-              ),
-              const SizedBox(height: 24),
-              _buildTextField(_barrioController, 'Barrio / PH / Edificio'),
-              const SizedBox(height: 16),
-              _buildTextField(_casaController, 'Casa / Apartamento No.'),
-              const SizedBox(height: 32),
-              
-              // BOTÓN CONTINUAR
-              ElevatedButton(
-                onPressed: _onContinue,
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accent,
-                    foregroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))
-                ),
-                child: Text(
-                  'Continuar a Coordinar Cita',
-                  style: AppTextStyles.button.copyWith(fontSize: 18, color: AppColors.primary),
-                ),
-              ),
-              if (_isLoading)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: CircularProgressIndicator(color: AppColors.accent),
+                            ElevatedButton.icon(
+                              onPressed: _isAutoFilling ? null : _pickLocation,
+                              icon: Icon(_latitude != null ? Icons.check_circle : Icons.map, color: AppColors.primary),
+                              label: Text(
+                                  _latitude != null ? 'Ubicación Seleccionada' : 'Seleccionar en Mapa', 
+                                  style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _latitude != null ? Colors.greenAccent : AppColors.accent,
+                                padding: const EdgeInsets.symmetric(vertical: 15),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+
+                            _buildLocationDropdown(
+                              label: 'Provincia',
+                              items: _provinces,
+                              selectedItem: _selectedProvince,
+                              onChanged: (val) {
+                                setState(() => _selectedProvince = val);
+                                if (val != null) _fetchDistricts(val.id);
+                              },
+                              isEnabled: !_isLoading,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildLocationDropdown(
+                              label: 'Distrito',
+                              items: _districts,
+                              selectedItem: _selectedDistrict,
+                              onChanged: (val) {
+                                setState(() => _selectedDistrict = val);
+                                if (val != null) _fetchCorregimientos(val.id);
+                              },
+                              isEnabled: _selectedProvince != null && !_isLoading,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildLocationDropdown(
+                              label: 'Corregimiento',
+                              items: _corregimientos,
+                              selectedItem: _selectedCorregimiento,
+                              onChanged: (val) => setState(() => _selectedCorregimiento = val),
+                              isEnabled: _selectedDistrict != null && !_isLoading,
+                            ),
+                            const SizedBox(height: 24),
+                            _buildTextField(_barrioController, 'Barrio / PH / Edificio'),
+                            const SizedBox(height: 16),
+                            _buildTextField(_casaController, 'Casa / Apartamento No.'),
+                            const SizedBox(height: 32),
+                            
+                            ElevatedButton(
+                              onPressed: _onContinue,
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.accent,
+                                  foregroundColor: AppColors.primary,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))
+                              ),
+                              child: Text(
+                                'Continuar a Coordinar Cita',
+                                style: AppTextStyles.button.copyWith(fontSize: 18, color: AppColors.primary),
+                              ),
+                            ),
+                            if (_isLoading)
+                              const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(16.0),
+                                  child: CircularProgressIndicator(color: AppColors.accent),
+                                ),
+                              ),
+                            if (_errorMessage != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 16.0),
+                                child: Text(
+                                  _errorMessage!,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(color: AppColors.danger),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              if (_errorMessage != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 16.0),
-                  child: Text(
-                    _errorMessage!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.danger),
+                  
+                  // 👇 4. EL FOOTER GLOBAL AL FINAL DE LA PANTALLA
+                  const SliverToBoxAdapter(
+                    child: AppFooterBarContent(),
                   ),
-                ),
-            ],
-          ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  // WIDGETS DE ALTO CONTRASTE (Reutilizados del RegisterScreen)
-
+  // WIDGETS DE ALTO CONTRASTE
   Widget _buildLocationDropdown({
     required String label,
     required List<LocationModel> items,
@@ -532,19 +529,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
         ),
         initialValue: selectedItem,
         style: AppTextStyles.bodyText.copyWith(color: Colors.white),
-        items: items
-            .map(
-              (item) => DropdownMenuItem(
-                value: item,
-                child: Text(
-                  item.name,
-                  style: AppTextStyles.bodyText.copyWith(
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            )
-            .toList(),
+        items: items.map((item) => DropdownMenuItem(value: item, child: Text(item.name, style: AppTextStyles.bodyText.copyWith(color: Colors.white)))).toList(),
         onChanged: isEnabled ? onChanged : null,
         validator: (value) => value == null ? 'Este campo es requerido' : null,
       ),
@@ -572,8 +557,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
           borderSide: const BorderSide(color: AppColors.accent, width: 2),
         ),
       ),
-      validator: (value) =>
-          value == null || value.isEmpty ? 'Este campo es requerido' : null,
+      validator: (value) => value == null || value.isEmpty ? 'Este campo es requerido' : null,
     );
   }
 }

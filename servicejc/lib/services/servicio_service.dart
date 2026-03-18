@@ -15,8 +15,8 @@ class ServicioService extends ApiService {
     final headers = await getHeaders();
 
     final response = await http.get(
-      Uri.parse('$baseUrl/servicios'), 
-      headers: headers, // Pasamos la variable ya lista
+      Uri.parse('$baseUrl/categorias_principales'), // ✅ ESTE ES EL ENDPOINT CON EL ORDEN
+      headers: headers, 
     );
 
     if (response.statusCode == 200) {

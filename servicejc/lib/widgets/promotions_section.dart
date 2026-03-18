@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart'; // 👈 IMPORTANTE
 import 'package:servicejc/models/categoria_principal_model.dart';
-import 'package:servicejc/screens/servicios_screen.dart'; 
+import 'package:servicejc/screens/servicios_screen.dart';
+import '../theme/app_colors.dart';
 
 class PromotionsSection extends StatefulWidget {
   final List<CategoriaPrincipalModel> servicios;
@@ -33,7 +35,6 @@ class _PromotionsSectionState extends State<PromotionsSection> {
 
   void _startAutoPlay() {
     _timer = Timer.periodic(const Duration(seconds: 4), (Timer timer) {
-      // ✅ CORREGIDO: Aseguramos bloques con llaves
       if (widget.servicios.isNotEmpty && _pageController.hasClients) {
         _currentPage++;
         if (_currentPage >= widget.servicios.take(5).length) {
@@ -50,42 +51,10 @@ class _PromotionsSectionState extends State<PromotionsSection> {
     });
   }
 
-  // ✅ CORREGIDO: Todos los if/else tienen llaves
-  String _getImagePath(CategoriaPrincipalModel categoria) {
-    final String data = "${categoria.id} ${categoria.nombre}".toLowerCase();
-
-    if (data.contains('decor')) {
-      return 'assets/images/services/decoracion.png';
-    } else if (data.contains('eban') || data.contains('mader')) {
-      return 'assets/images/services/ebanistas.png';
-    } else if (data.contains('panel') || data.contains('solar')) {
-      return 'assets/images/services/paneles.png';
-    } else if (data.contains('ventan') || data.contains('vidrio')) {
-      return 'assets/images/services/ventanas.png';
-    } else if (data.contains('aire') || data.contains('acond')) {
-      return 'assets/images/services/aire_acondicionado.png';
-    } else if (data.contains('elect')) {
-      return 'assets/images/services/electricidad.png';
-    } else if (data.contains('limp')) {
-      return 'assets/images/services/limpieza_general.png';
-    } else if (data.contains('plom') || data.contains('agua')) {
-      return 'assets/images/services/plomeria.png';
-    } else if (data.contains('remodel')) {
-      return 'assets/images/services/remodelaciones.png';
-    } else if (data.contains('const')) {
-      return 'assets/images/services/construccion.png';
-    } else if (data.contains('pint')) {
-      return 'assets/images/services/pintura.png';
-    }
-    
-    return 'assets/images/services/mantenimiento.png';
-  }
-
   @override
   Widget build(BuildContext context) {
     final promos = widget.servicios.take(5).toList();
 
-    // ✅ CORREGIDO
     if (promos.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -116,40 +85,59 @@ class _PromotionsSectionState extends State<PromotionsSection> {
                 },
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 8.0),
-                  decoration: BoxDecoration(
+                  child: ClipRRect(
                     borderRadius: BorderRadius.circular(20),
-                    image: DecorationImage(
-                      image: AssetImage(_getImagePath(servicio)),
-                      fit: BoxFit.cover
-                    )
-                  ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
-                      ),
-                    ),
-                    padding: const EdgeInsets.all(20),
-                    alignment: Alignment.bottomLeft,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Stack(
+                      fit: StackFit.expand,
                       children: [
+                        // 🔥 IMAGEN DESDE FIREBASE
+                        if (servicio.imageUrl != null && servicio.imageUrl!.isNotEmpty)
+                          CachedNetworkImage(
+                            imageUrl: servicio.imageUrl!,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Container(color: AppColors.secondary),
+                            errorWidget: (context, url, error) => Container(
+                              color: AppColors.secondary,
+                              child: const Icon(Icons.broken_image, color: Colors.white54),
+                            ),
+                          )
+                        else
+                          Container(color: AppColors.secondary),
+
+                        // DEGRADADO
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: accentColor,
-                            borderRadius: BorderRadius.circular(8),
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
+                            ),
                           ),
-                          child: const Text('OFERTA', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10)),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          servicio.nombre,
-                          style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+
+                        // TEXTO O SOBREPOSICIÓN
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          alignment: Alignment.bottomLeft,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: accentColor,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Text('OFERTA', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.black)),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                servicio.nombre,
+                                style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),

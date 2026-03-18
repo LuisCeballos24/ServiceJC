@@ -4,7 +4,6 @@ import com.backend.servicejc.model.SolicitudPago;
 import com.backend.servicejc.service.PagoService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,8 +20,8 @@ public class PagoController {
         this.pagoService = pagoService;
     }
 
-    @PostMapping // El endpoint será POST /api/pagos
-    // @PreAuthorize("hasAnyAuthority('USUARIO_FINAL', 'ADMINISTRATIVO')")
+    // 👇 AQUÍ ESTÁ EL CAMBIO CRÍTICO: Agregamos "/procesar"
+    @PostMapping("/procesar") 
     public ResponseEntity<?> processPayment(@RequestBody SolicitudPago solicitud, Authentication authentication) {
         try {
             // Obtenemos el ID del usuario logueado por seguridad

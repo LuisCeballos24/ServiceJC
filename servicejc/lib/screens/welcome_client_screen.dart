@@ -16,6 +16,7 @@ import 'package:servicejc/widgets/promo_carousel.dart';
 import 'package:servicejc/widgets/services_grid.dart';
 import 'package:servicejc/widgets/testimonials_section.dart';
 import 'package:servicejc/widgets/app_footer_bar_content.dart';
+import 'package:servicejc/widgets/vip_promo_card.dart';
 
 // Estilos
 import '../theme/app_colors.dart';
@@ -176,6 +177,11 @@ class _WelcomeClientScreenState extends State<WelcomeClientScreen> {
                           promotionsKey: promotionsKey,
                         ),
                         const SizedBox(height: 32),
+                        
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16.0),
+                          child: VipPromoCard(),
+                        ),
                         
                         PromotionsSection(
                           key: promotionsKey, 

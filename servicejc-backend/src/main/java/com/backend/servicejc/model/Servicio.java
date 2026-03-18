@@ -9,8 +9,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Servicio {
-    @DocumentId // <--- ¡Asegúrate de que esta línea esté aquí!
+    @DocumentId 
     private String id;
     private String nombre;
     private String categoriaPrincipalId;
+    
+    // 👇 NUEVOS CAMPOS
+    private Integer orden; 
+    private String imageUrl; 
 }
